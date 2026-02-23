@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { pickupAddress, dropoffAddress, preferKin, specificDriverId, scheduledAt } = parsed.data;
+    const { pickupAddress, dropoffAddress, preferKin, specificDriverId, scheduledAt, riderNote } = parsed.data;
 
     const fare = await estimateFare(pickupAddress, dropoffAddress);
 
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         estimatedFare: fare,
         isKinRide,
+        riderNote: riderNote ?? null,
       },
     });
 

@@ -84,6 +84,13 @@ app.prepare().then(() => {
       }
     });
 
+    socket.on("driver:location", (data: { rideId: string; lat: number; lng: number }) => {
+      socket.to(`ride:${data.rideId}`).emit("driver:location", {
+        lat: data.lat,
+        lng: data.lng,
+      });
+    });
+
     socket.on("chat:message", (data: { rideId: string; message: unknown }) => {
       io.to(`ride:${data.rideId}`).emit("chat:message", data.message);
     });

@@ -58,6 +58,13 @@ export function useSocket() {
     []
   );
 
+  const emitDriverLocation = useCallback(
+    (rideId: string, lat: number, lng: number) => {
+      socketRef.current?.emit("driver:location", { rideId, lat, lng });
+    },
+    []
+  );
+
   const joinConversation = useCallback((conversationId: string) => {
     socketRef.current?.emit("join:conversation", conversationId);
   }, []);
@@ -91,6 +98,7 @@ export function useSocket() {
     sendMessage,
     emitRideStatus,
     emitRideAccepted,
+    emitDriverLocation,
     joinConversation,
     leaveConversation,
     sendDM,

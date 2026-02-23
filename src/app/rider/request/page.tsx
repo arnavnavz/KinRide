@@ -11,6 +11,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import type { LatLng } from "@/lib/geocode";
 import { haptic } from "@/lib/haptic";
 import { formatSurgeLabel } from "@/lib/surge";
+import { fetchRoute } from "@/lib/routing";
 
 const RideMap = dynamic(() => import("@/components/RideMap").then((m) => m.RideMap), {
   ssr: false,
@@ -90,6 +91,7 @@ export default function RequestRidePage() {
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [showSaveDropdown, setShowSaveDropdown] = useState(false);
   const [surge, setSurge] = useState<{ multiplier: number; label: string; color: string }>({ multiplier: 1.0, label: "", color: "" });
+  const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [promoExpanded, setPromoExpanded] = useState(false);
   const [promoInput, setPromoInput] = useState("");
   const [applyingPromo, setApplyingPromo] = useState(false);
@@ -100,6 +102,8 @@ export default function RequestRidePage() {
   } | null>(null);
   const [promoError, setPromoError] = useState("");
   const [promoSuccess, setPromoSuccess] = useState("");
+  const [noteExpanded, setNoteExpanded] = useState(false);
+  const [riderNote, setRiderNote] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -215,6 +219,21 @@ export default function RequestRidePage() {
     }
   }, [pickupCoords, dropoffCoords, fetchFareEstimate]);
 
+  useEffect(() => {
+    if (!pickupCoords || !dropoffCoords) {
+      setRouteCoords(null);
+      return;
+    }
+    const waypoints = [pickupCoords, ...stops.filter((s) => s.coords).map((s) => s.coords!), dropoffCoords];
+    fetchRoute(waypoints).then((result) => {
+      if (result) {
+        setRouteCoords(result.coordinates);
+        setDistanceMiles(Math.round(result.distanceMeters / 1609.34 * 10) / 10);
+        setDurationMinutes(Math.round(result.durationSeconds / 60));
+      }
+    });
+  }, [pickupCoords, dropoffCoords, stops]);
+
   const proceedToTypeSelect = () => {
     if (!pickupCoords || !dropoffCoords) return;
     setStep("select-type");
@@ -240,6 +259,7 @@ export default function RequestRidePage() {
           preferKin,
           specificDriverId: specificDriverId || undefined,
           scheduledAt: scheduledAt || undefined,
+          riderNote: riderNote.trim() || undefined,
         }),
       });
       if (!res.ok) {
@@ -379,6 +399,16 @@ export default function RequestRidePage() {
                   My Kin
                 </Link>
                 <Link
+                  href="/rider/wallet"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Wallet
+                </Link>
+                <Link
                   href="/rider/promos"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
@@ -387,6 +417,16 @@ export default function RequestRidePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
                   Promos & Referrals
+                </Link>
+                <Link
+                  href="/rider/support"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  Support
                 </Link>
                 <Link
                   href="/profile"
@@ -424,6 +464,7 @@ export default function RequestRidePage() {
           dropoff={dropoffCoords}
           stops={stops.filter((s) => s.coords).map((s) => ({ lat: s.coords!.lat, lng: s.coords!.lng }))}
           userLocation={userLocation}
+          routeCoordinates={routeCoords}
           className="absolute inset-0"
           rounded={false}
         />
@@ -997,6 +1038,49 @@ export default function RequestRidePage() {
                       <span className="line-through">${fareForType.toFixed(2)}</span>
                     </span>
                     <span className="font-bold text-green-600 dark:text-green-400">${finalFare?.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Rider note */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => setNoteExpanded(!noteExpanded)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                    riderNote.trim()
+                      ? "border-primary bg-primary/5"
+                      : noteExpanded
+                        ? "border-primary bg-primary/5"
+                        : "border-card-border bg-card hover:border-primary/30"
+                  }`}
+                >
+                  <svg className={`w-5 h-5 shrink-0 ${noteExpanded || riderNote.trim() ? "text-primary" : "text-foreground/40"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span className={`text-sm font-medium ${noteExpanded || riderNote.trim() ? "text-primary" : "text-foreground"}`}>
+                    {riderNote.trim() ? "Note added" : "Add a note for your driver"}
+                  </span>
+                  <svg className={`w-4 h-4 ml-auto text-foreground/30 transition-transform ${noteExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {noteExpanded && (
+                  <div className="animate-fade-in space-y-2">
+                    <textarea
+                      value={riderNote}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 200) setRiderNote(e.target.value);
+                      }}
+                      placeholder={`e.g. "I'll be at the back entrance" or "I have a wheelchair"`}
+                      rows={3}
+                      className="w-full bg-subtle border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <span className={`text-xs ${riderNote.length >= 180 ? "text-red-400" : "text-foreground/30"}`}>
+                        {riderNote.length}/200
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

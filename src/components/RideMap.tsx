@@ -77,11 +77,12 @@ interface RideMapProps {
   stops?: Array<{ lat: number; lng: number }>;
   driverLocation?: LatLng | null;
   userLocation?: LatLng | null;
+  routeCoordinates?: [number, number][] | null;
   className?: string;
   rounded?: boolean;
 }
 
-export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocation, className = "", rounded = true }: RideMapProps) {
+export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocation, routeCoordinates, className = "", rounded = true }: RideMapProps) {
   const fitPoints = useMemo(() => {
     const pts: LatLng[] = [];
     if (pickup) pts.push(pickup);
@@ -98,8 +99,10 @@ export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocat
     return [37.7749, -122.4194];
   }, [pickup, dropoff, userLocation]);
 
-  const routeLine = useMemo(() => {
-    if (!pickup || !dropoff) return null;
+  const hasRealRoute = routeCoordinates && routeCoordinates.length >= 2;
+
+  const fallbackLine = useMemo(() => {
+    if (hasRealRoute || !pickup || !dropoff) return null;
     const waypoints: [number, number][] = [
       [pickup.lat, pickup.lng],
       ...stops.map((s) => [s.lat, s.lng] as [number, number]),
@@ -119,7 +122,9 @@ export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocat
     }
     result.push([dropoff.lat, dropoff.lng]);
     return result;
-  }, [pickup, dropoff, stops]);
+  }, [hasRealRoute, pickup, dropoff, stops]);
+
+  const routeLine = hasRealRoute ? routeCoordinates : fallbackLine;
 
   const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
   const tileUrl = isDark
@@ -160,9 +165,9 @@ export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocat
             positions={routeLine}
             pathOptions={{
               color: "#8b5cf6",
-              weight: 5,
+              weight: hasRealRoute ? 6 : 5,
               opacity: 0.8,
-              dashArray: "8 12",
+              ...(hasRealRoute ? {} : { dashArray: "8 12" }),
             }}
           />
         )}

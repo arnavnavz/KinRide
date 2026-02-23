@@ -14,6 +14,7 @@ import { CardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { useSocket } from "@/hooks/useSocket";
 import { geocodeAddress, type LatLng } from "@/lib/geocode";
+import { fetchRoute } from "@/lib/routing";
 
 const RideMap = dynamic(() => import("@/components/RideMap").then((m) => m.RideMap), {
   ssr: false,
@@ -93,7 +94,18 @@ export default function RiderRidePage() {
   const [ratingComment, setRatingComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [showTip, setShowTip] = useState(false);
+  const [tipAmount, setTipAmount] = useState<number | null>(null);
+  const [customTip, setCustomTip] = useState("");
+  const [submittingTip, setSubmittingTip] = useState(false);
+  const [hasTipped, setHasTipped] = useState(false);
+  const [tippedAmount, setTippedAmount] = useState<number>(0);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
+  const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitCount, setSplitCount] = useState(2);
+  const [splitLoading, setSplitLoading] = useState(false);
+  const [splitLink, setSplitLink] = useState("");
   const { joinRide, onEvent } = useSocket();
 
   const loadRide = useCallback(async () => {
@@ -128,38 +140,55 @@ export default function RiderRidePage() {
 
   useEffect(() => {
     if (!ride) return;
-    geocodeAddress(ride.pickupAddress).then((c) => {
-      if (c) {
-        setPickupCoords(c);
-        const sim = simulateDriverLocation(c, ride.status);
-        setDriverCoords(sim);
+    geocodeAddress(ride.pickupAddress).then(setPickupCoords);
+    geocodeAddress(ride.dropoffAddress).then(setDropoffCoords);
+  }, [ride?.pickupAddress, ride?.dropoffAddress]);
+
+  useEffect(() => {
+    if (!pickupCoords || !dropoffCoords) {
+      setRouteCoords(null);
+      return;
+    }
+    fetchRoute([pickupCoords, dropoffCoords]).then((result) => {
+      if (result) setRouteCoords(result.coordinates);
+    });
+  }, [pickupCoords, dropoffCoords]);
+
+  useEffect(() => {
+    const unsub = onEvent("driver:location", (data: unknown) => {
+      const loc = data as { lat: number; lng: number };
+      setDriverCoords(loc);
+      if (pickupCoords && ["ACCEPTED", "ARRIVING"].includes(ride?.status ?? "")) {
+        const toRad = (d: number) => (d * Math.PI) / 180;
+        const dLat = toRad(pickupCoords.lat - loc.lat);
+        const dLng = toRad(pickupCoords.lng - loc.lng);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(loc.lat)) * Math.cos(toRad(pickupCoords.lat)) * Math.sin(dLng / 2) ** 2;
+        const dist = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        setEtaMinutes(Math.max(1, Math.round(dist * 1.3 * 2.5)));
+      }
+      setHasRealLocation(true);
+    });
+    return unsub;
+  }, [onEvent, pickupCoords, ride?.status]);
+
+  useEffect(() => {
+    if (hasRealLocation) return;
+    const timer = setTimeout(() => {
+      if (!hasRealLocation && pickupCoords && ride) {
+        const sim = simulateDriverLocation(pickupCoords, ride.status);
         if (sim) {
+          setDriverCoords(sim);
           const toRad = (d: number) => (d * Math.PI) / 180;
-          const dLat = toRad(c.lat - sim.lat);
-          const dLng = toRad(c.lng - sim.lng);
-          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(sim.lat)) * Math.cos(toRad(c.lat)) * Math.sin(dLng / 2) ** 2;
+          const dLat = toRad(pickupCoords.lat - sim.lat);
+          const dLng = toRad(pickupCoords.lng - sim.lng);
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(sim.lat)) * Math.cos(toRad(pickupCoords.lat)) * Math.sin(dLng / 2) ** 2;
           const dist = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           setEtaMinutes(Math.max(1, Math.round(dist * 1.3 * 2.5)));
         }
       }
-    });
-    geocodeAddress(ride.dropoffAddress).then(setDropoffCoords);
-  }, [ride?.pickupAddress, ride?.dropoffAddress, ride?.status]);
-
-  useEffect(() => {
-    if (!pickupCoords || !ride || ride.status !== "ARRIVING") return;
-    const interval = setInterval(() => {
-      setDriverCoords((prev) => {
-        if (!prev || !pickupCoords) return prev;
-        return {
-          lat: prev.lat + (pickupCoords.lat - prev.lat) * 0.15,
-          lng: prev.lng + (pickupCoords.lng - prev.lng) * 0.15,
-        };
-      });
-      setEtaMinutes((prev) => prev ? Math.max(1, prev - 1) : null);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [pickupCoords, ride?.status]);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [hasRealLocation, pickupCoords, ride]);
 
   useEffect(() => {
     if (ride?.status === "COMPLETED" && ride?.driverId) {
@@ -167,6 +196,16 @@ export default function RiderRidePage() {
         .then((r) => r.json())
         .then((data) => {
           if (data.rating) setHasRated(true);
+        })
+        .catch(() => {});
+
+      fetch(`/api/tips?rideRequestId=${ride.id}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.tip) {
+            setHasTipped(true);
+            setTippedAmount(data.tip.amount);
+          }
         })
         .catch(() => {});
     }
@@ -194,6 +233,31 @@ export default function RiderRidePage() {
       setCanceling(false);
       setShowCancelModal(false);
       setCancelReason("");
+    }
+  };
+
+  const generateSplitLink = async () => {
+    if (!ride) return;
+    setSplitLoading(true);
+    try {
+      const res = await fetch(`/api/rides/${ride.id}/split`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ splitCount }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSplitLink(data.splitLink);
+        await navigator.clipboard.writeText(data.splitLink);
+        toast("Split link copied to clipboard!", "success");
+      } else {
+        const data = await res.json();
+        toast(data.error?.toString() || "Failed to generate split link", "error");
+      }
+    } catch {
+      toast("Failed to generate split link", "error");
+    } finally {
+      setSplitLoading(false);
     }
   };
 
@@ -265,6 +329,33 @@ export default function RiderRidePage() {
       toast("Failed to submit rating", "error");
     } finally {
       setSubmittingRating(false);
+    }
+  };
+
+  const submitTip = async () => {
+    const amount = tipAmount === -1 ? parseFloat(customTip) : tipAmount;
+    if (!amount || amount < 1 || amount > 100 || !ride) return;
+    setSubmittingTip(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/tips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rideRequestId: ride.id, amount }),
+      });
+      if (res.ok) {
+        toast("Tip sent! Your driver appreciates it.", "success");
+        setShowTip(false);
+        setHasTipped(true);
+        setTippedAmount(amount);
+      } else {
+        const data = await res.json();
+        toast(data.error || "Failed to send tip", "error");
+      }
+    } catch {
+      toast("Failed to send tip", "error");
+    } finally {
+      setSubmittingTip(false);
     }
   };
 
@@ -409,6 +500,7 @@ export default function RiderRidePage() {
             pickup={pickupCoords}
             dropoff={dropoffCoords}
             driverLocation={showDriverOnMap ? driverCoords : null}
+            routeCoordinates={routeCoords}
             className="h-full"
           />
         </div>
@@ -521,7 +613,7 @@ export default function RiderRidePage() {
       )}
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {isActive && ride.status !== "IN_PROGRESS" && (
           <button
             onClick={() => setShowCancelModal(true)}
@@ -529,6 +621,17 @@ export default function RiderRidePage() {
             className="flex-1 bg-red-50 text-red-600 py-2.5 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50 active:scale-[0.98]"
           >
             {canceling ? "Canceling..." : "Cancel Ride"}
+          </button>
+        )}
+        {isActive && ride.estimatedFare && (
+          <button
+            onClick={() => { setShowSplitModal(true); setSplitLink(""); }}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors active:scale-[0.98]"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Split Fare
           </button>
         )}
         {ride.status === "COMPLETED" && (
@@ -549,6 +652,22 @@ export default function RiderRidePage() {
           >
             Rate Driver
           </button>
+        )}
+        {ride.status === "COMPLETED" && ride.driver && !hasTipped && (
+          <button
+            onClick={() => setShowTip(true)}
+            className="flex-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 py-2.5 rounded-xl text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors active:scale-[0.98]"
+          >
+            Tip Driver
+          </button>
+        )}
+        {ride.status === "COMPLETED" && ride.driver && hasTipped && (
+          <div className="flex-1 flex items-center justify-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 py-2.5 rounded-xl text-sm font-medium">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Tip sent · ${tippedAmount.toFixed(2)}
+          </div>
         )}
         {ride.status === "COMPLETED" && ride.driver && (
           <button
@@ -613,6 +732,176 @@ export default function RiderRidePage() {
                 {submittingRating ? "Submitting..." : "Submit"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tip modal */}
+      {showTip && (
+        <div className="fixed inset-0 bg-black/40 backdrop-animate flex items-center justify-center z-50" onClick={() => setShowTip(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm mx-4 w-full animate-fade-in-scale" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Tip your driver</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Show {ride.driver?.name} your appreciation</p>
+
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[2, 5, 10].map((amt) => (
+                <button
+                  key={amt}
+                  onClick={() => { setTipAmount(amt); setCustomTip(""); }}
+                  className={`py-3 rounded-xl text-sm font-semibold transition-all border ${
+                    tipAmount === amt
+                      ? "border-green-400 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shadow-sm"
+                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
+                  ${amt}
+                </button>
+              ))}
+              <button
+                onClick={() => { setTipAmount(-1); setCustomTip(""); }}
+                className={`py-3 rounded-xl text-sm font-semibold transition-all border ${
+                  tipAmount === -1
+                    ? "border-green-400 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shadow-sm"
+                    : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                Custom
+              </button>
+            </div>
+
+            {tipAmount === -1 && (
+              <div className="mb-4 animate-fade-in">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-medium">$</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="0.01"
+                    value={customTip}
+                    onChange={(e) => setCustomTip(e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-xl pl-7 pr-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400/30 focus:border-green-400"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Between $1 and $100</p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowTip(false)}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                Not Now
+              </button>
+              <button
+                onClick={submitTip}
+                disabled={submittingTip || (!tipAmount || (tipAmount === -1 && (!customTip || parseFloat(customTip) < 1 || parseFloat(customTip) > 100)))}
+                className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-green-600 transition-colors"
+              >
+                {submittingTip ? "Sending..." : tipAmount && tipAmount > 0 ? `Send $${tipAmount} Tip` : tipAmount === -1 && customTip ? `Send $${parseFloat(customTip).toFixed(2)} Tip` : "Send Tip"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Split Fare modal */}
+      {showSplitModal && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-animate flex items-center justify-center z-50"
+          onClick={() => setShowSplitModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm mx-4 w-full animate-fade-in-scale"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Split Fare</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              Share the cost with friends
+            </p>
+
+            {!splitLink ? (
+              <>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-medium">How many people?</p>
+                <div className="grid grid-cols-3 gap-2 mb-5">
+                  {[2, 3, 4].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setSplitCount(n)}
+                      className={`py-3 rounded-xl text-sm font-semibold transition-all border ${
+                        splitCount === n
+                          ? "border-violet-400 bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 shadow-sm"
+                          : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      {n} people
+                    </button>
+                  ))}
+                </div>
+
+                {ride.estimatedFare && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-5 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Total fare</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">${ride.estimatedFare.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">Per person</span>
+                      <span className="font-bold text-violet-600 dark:text-violet-400">
+                        ${(ride.estimatedFare / splitCount).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSplitModal(false)}
+                    className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={generateSplitLink}
+                    disabled={splitLoading}
+                    className="flex-1 bg-violet-500 text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-violet-600 transition-colors"
+                  >
+                    {splitLoading ? "Generating..." : "Generate & Copy Link"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 text-center">
+                  <svg className="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-sm font-medium text-green-700 dark:text-green-300">Link copied to clipboard!</p>
+                  <p className="text-xs text-green-600/70 dark:text-green-400/70 mt-1">Share it with your friends</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 break-all font-mono">{splitLink}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(splitLink);
+                    toast("Link copied again!", "success");
+                  }}
+                  className="w-full bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors"
+                >
+                  Copy Again
+                </button>
+                <button
+                  onClick={() => setShowSplitModal(false)}
+                  className="w-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

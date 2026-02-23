@@ -7,6 +7,7 @@ export const rideRequestSchema = z.object({
   preferKin: z.boolean().optional().default(false),
   specificDriverId: z.string().optional(),
   scheduledAt: z.string().datetime().optional(),
+  riderNote: z.string().max(200).optional(),
 });
 
 export const messageSchema = z.object({

@@ -64,6 +64,10 @@ model User {
   promoRedemptions    PromoRedemption[]     @relation("UserPromos")
   referralsMade       Referral[]            @relation("ReferrerReferrals")
   referralsUsed       Referral[]            @relation("RefereeReferrals")
+  tipsGiven           Tip[]                 @relation("TipGiver")
+  tipsReceived        Tip[]                 @relation("TipReceiver")
+  wallet              Wallet?
+  supportTickets      SupportTicket[]       @relation("UserTickets")
 }
 
 model DriverProfile {
@@ -146,6 +150,7 @@ model RideRequest {
   estimatedFare    Float?
   platformFee      Float?
   isKinRide        Boolean    @default(false)
+  riderNote        String?
   shareToken       String     @unique @default(cuid())
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -153,6 +158,7 @@ model RideRequest {
   offers   RideOffer[]
   messages Message[]
   ratings  Rating[]
+  tips     Tip[]
 
   @@index([riderId, status])
   @@index([driverId, status])
@@ -283,4 +289,57 @@ model Referral {
   createdAt    DateTime @default(now())
 
   @@index([referrerId])
+}
+
+model Tip {
+  id            String      @id @default(cuid())
+  riderId       String
+  rider         User        @relation("TipGiver", fields: [riderId], references: [id])
+  driverId      String
+  driver        User        @relation("TipReceiver", fields: [driverId], references: [id])
+  rideRequestId String
+  rideRequest   RideRequest @relation(fields: [rideRequestId], references: [id])
+  amount        Float
+  createdAt     DateTime    @default(now())
+
+  @@unique([rideRequestId, riderId])
+  @@index([driverId])
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  balance      Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  amount      Float
+  type        String   // "credit", "debit", "tip_received", "referral_bonus", "loyalty_redeem", "refund"
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([walletId, createdAt])
+}
+
+model SupportTicket {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserTickets", fields: [userId], references: [id])
+  rideRequestId String?
+  subject       String
+  description   String
+  status        String   @default("open") // "open", "in_review", "resolved", "closed"
+  category      String   // "fare_dispute", "safety", "lost_item", "driver_issue", "app_issue", "other"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, status])
 }
