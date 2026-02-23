@@ -20,11 +20,51 @@ interface ChatPanelProps {
   receiverId: string;
 }
 
+const LOCATION_PREFIX = "📍 Location:";
+
+function isLocationMessage(content: string): boolean {
+  return content.startsWith(LOCATION_PREFIX);
+}
+
+function parseLocationCoords(content: string): { lat: number; lng: number } | null {
+  const match = content.match(/📍 Location:\s*([-\d.]+),([-\d.]+)/);
+  if (!match) return null;
+  const lat = parseFloat(match[1]);
+  const lng = parseFloat(match[2]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  return { lat, lng };
+}
+
+function LocationBubble({ content }: { content: string }) {
+  const coords = parseLocationCoords(content);
+  if (!coords) return <span>{content}</span>;
+
+  const mapsUrl = `https://maps.apple.com/?ll=${coords.lat},${coords.lng}&q=Shared%20Location`;
+
+  return (
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 no-underline"
+    >
+      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span className="underline">
+        📍 {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+      </span>
+    </a>
+  );
+}
+
 export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [sharingLocation, setSharingLocation] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { joinRide, leaveRide, sendMessage, onEvent } = useSocket();
@@ -55,9 +95,7 @@ export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps)
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || sending) return;
-    const content = input.trim();
+  const sendContent = async (content: string) => {
     setSending(true);
     setInput("");
 
@@ -97,6 +135,27 @@ export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps)
     } finally {
       setSending(false);
     }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || sending) return;
+    await sendContent(input.trim());
+  };
+
+  const handleShareLocation = () => {
+    if (!navigator.geolocation || sharingLocation) return;
+    setSharingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        sendContent(`📍 Location: ${latitude},${longitude}`);
+        setSharingLocation(false);
+      },
+      () => {
+        setSharingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const retryMessage = async (failedMsg: ChatMessage) => {
@@ -174,6 +233,7 @@ export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps)
         )}
         {messages.map((m) => {
           const isMe = m.senderId === currentUserId;
+          const isLocation = isLocationMessage(m.content);
           return (
             <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} animate-fade-in`}>
               <div className="flex items-end gap-2 max-w-[75%]">
@@ -191,7 +251,7 @@ export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps)
                     {!isMe && (
                       <div className="text-xs font-medium text-gray-500 mb-0.5">{m.sender.name}</div>
                     )}
-                    {m.content}
+                    {isLocation ? <LocationBubble content={m.content} /> : m.content}
                   </div>
                   {m._failed && (
                     <div className="flex items-center gap-2 mt-0.5 justify-end">
@@ -223,6 +283,22 @@ export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps)
           aria-label="Type a message"
           className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         />
+        <button
+          onClick={handleShareLocation}
+          disabled={sharingLocation || sending}
+          aria-label="Share location"
+          title="Share location"
+          className="border border-gray-300 text-gray-500 px-2.5 py-2.5 rounded-lg text-sm hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 active:scale-[0.97] shrink-0"
+        >
+          {sharingLocation ? (
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          )}
+        </button>
         <button
           onClick={handleSend}
           disabled={sending || !input.trim()}

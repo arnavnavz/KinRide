@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { PageSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { Navbar } from "@/components/Navbar";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface ProfileData {
   id: string;
@@ -53,6 +54,25 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+  const [emailPrefs, setEmailPrefs] = useState({
+    tripReceipts: true,
+    weeklySummary: true,
+    promotions: false,
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kinride-email-prefs");
+      if (saved) setEmailPrefs(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const updateEmailPref = (key: keyof typeof emailPrefs, value: boolean) => {
+    const updated = { ...emailPrefs, [key]: value };
+    setEmailPrefs(updated);
+    localStorage.setItem("kinride-email-prefs", JSON.stringify(updated));
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/signin");
@@ -333,6 +353,76 @@ export default function ProfilePage() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Email Preferences */}
+          <div className="bg-card rounded-2xl border border-card-border p-5 mb-4">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Email Preferences</h2>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <p className="text-sm text-foreground">Trip receipts</p>
+                  <p className="text-xs text-foreground/40">Receive a receipt after each ride</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={emailPrefs.tripReceipts}
+                  onClick={() => updateEmailPref("tripReceipts", !emailPrefs.tripReceipts)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${emailPrefs.tripReceipts ? "bg-primary" : "bg-foreground/20"}`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${emailPrefs.tripReceipts ? "translate-x-5" : "translate-x-0"}`}
+                  />
+                </button>
+              </label>
+
+              {isDriver && (
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <p className="text-sm text-foreground">Weekly earnings summary</p>
+                    <p className="text-xs text-foreground/40">Get a weekly earnings report every Monday</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={emailPrefs.weeklySummary}
+                    onClick={() => updateEmailPref("weeklySummary", !emailPrefs.weeklySummary)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${emailPrefs.weeklySummary ? "bg-primary" : "bg-foreground/20"}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${emailPrefs.weeklySummary ? "translate-x-5" : "translate-x-0"}`}
+                    />
+                  </button>
+                </label>
+              )}
+
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <p className="text-sm text-foreground">Promotional offers</p>
+                  <p className="text-xs text-foreground/40">Deals, discounts, and new features</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={emailPrefs.promotions}
+                  onClick={() => updateEmailPref("promotions", !emailPrefs.promotions)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${emailPrefs.promotions ? "bg-primary" : "bg-foreground/20"}`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${emailPrefs.promotions ? "translate-x-5" : "translate-x-0"}`}
+                  />
+                </button>
+              </label>
+            </div>
+          </div>
+
+          {/* Language */}
+          <div className="bg-card rounded-2xl border border-card-border p-5 mb-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">Language</h2>
+              <LanguageSwitcher />
+            </div>
           </div>
 
           {/* Driver Info */}

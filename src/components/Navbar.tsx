@@ -66,6 +66,7 @@ export function Navbar() {
         <>
           <NavLink href="/driver/dashboard" onClick={closeMenu}>Dashboard</NavLink>
           <NavLink href="/driver/earnings" onClick={closeMenu}>Earnings</NavLink>
+          <NavLink href="/driver/analytics" onClick={closeMenu}>Analytics</NavLink>
         </>
       )}
       {session.user.role === "ADMIN" && (

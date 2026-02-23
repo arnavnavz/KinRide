@@ -33,6 +33,7 @@ const RIDE_TYPES: RideType[] = [
   { id: "regular", label: "KinRide", desc: "Affordable everyday rides", icon: "🚗", multiplier: 1.0, eta: "3-5 min" },
   { id: "xl", label: "KinRide XL", desc: "Extra space for groups", icon: "🚙", multiplier: 1.5, eta: "5-8 min" },
   { id: "premium", label: "KinRide Premium", desc: "Top-rated drivers, luxury feel", icon: "✨", multiplier: 2.0, eta: "5-10 min" },
+  { id: "pool", label: "KinRide Pool", desc: "Share your ride, save up to 30%", icon: "👥", multiplier: 0.7, eta: "5-12 min" },
 ];
 
 interface SavedPlace {
@@ -90,6 +91,8 @@ export default function RequestRidePage() {
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [showSaveDropdown, setShowSaveDropdown] = useState(false);
+  const [showAddPlaceModal, setShowAddPlaceModal] = useState(false);
+  const [newPlaceLabel, setNewPlaceLabel] = useState("");
   const [surge, setSurge] = useState<{ multiplier: number; label: string; color: string }>({ multiplier: 1.0, label: "", color: "" });
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [promoExpanded, setPromoExpanded] = useState(false);
@@ -154,10 +157,13 @@ export default function RequestRidePage() {
   const savePlace = (label: string) => {
     if (!dropoff || !dropoffCoords) return;
     const updated = savedPlaces.filter((p) => p.label !== label);
+    if (updated.length >= 8 && !savedPlaces.some((p) => p.label === label)) return;
     updated.push({ label, address: dropoff, coords: dropoffCoords });
     setSavedPlaces(updated);
     localStorage.setItem("kinride-saved-places", JSON.stringify(updated));
     setShowSaveDropdown(false);
+    setShowAddPlaceModal(false);
+    setNewPlaceLabel("");
   };
 
   const removePlace = (label: string) => {
@@ -256,6 +262,7 @@ export default function RequestRidePage() {
           pickupAddress: pickup,
           dropoffAddress: dropoff,
           stops: stops.filter((s) => s.address && s.coords).map((s) => s.address),
+          rideType: selectedType,
           preferKin,
           specificDriverId: specificDriverId || undefined,
           scheduledAt: scheduledAt || undefined,
@@ -519,13 +526,13 @@ export default function RequestRidePage() {
               )}
 
               {/* Saved places */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
                 {(() => {
                   const home = savedPlaces.find((p) => p.label === "Home");
                   return home ? (
                     <button
                       onClick={() => applyPlace(home)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium transition-all active:scale-95 group"
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium transition-all active:scale-95 group"
                     >
                       <span>🏠</span>
                       <span className="truncate max-w-[100px]">Home</span>
@@ -536,11 +543,9 @@ export default function RequestRidePage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
-                        if (dropoff && dropoffCoords) savePlace("Home");
-                      }}
+                      onClick={() => { if (dropoff && dropoffCoords) savePlace("Home"); }}
                       disabled={!dropoff || !dropoffCoords}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-xs font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-xs font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <span>🏠</span>
                       Set Home
@@ -552,7 +557,7 @@ export default function RequestRidePage() {
                   return work ? (
                     <button
                       onClick={() => applyPlace(work)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium transition-all active:scale-95 group"
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium transition-all active:scale-95 group"
                     >
                       <span>🏢</span>
                       <span className="truncate max-w-[100px]">Work</span>
@@ -563,18 +568,85 @@ export default function RequestRidePage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
-                        if (dropoff && dropoffCoords) savePlace("Work");
-                      }}
+                      onClick={() => { if (dropoff && dropoffCoords) savePlace("Work"); }}
                       disabled={!dropoff || !dropoffCoords}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-xs font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-xs font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <span>🏢</span>
                       Set Work
                     </button>
                   );
                 })()}
+                {savedPlaces.filter((p) => p.label !== "Home" && p.label !== "Work").map((place) => (
+                  <button
+                    key={place.label}
+                    onClick={() => applyPlace(place)}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium transition-all active:scale-95 group"
+                  >
+                    <span>⭐</span>
+                    <span className="truncate max-w-[100px]">{place.label}</span>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); removePlace(place.label); }}
+                      className="ml-0.5 opacity-0 group-hover:opacity-100 text-primary/50 hover:text-primary transition-opacity"
+                    >×</span>
+                  </button>
+                ))}
+                {savedPlaces.length < 8 && (
+                  <button
+                    onClick={() => {
+                      if (dropoff && dropoffCoords) {
+                        setShowAddPlaceModal(true);
+                      }
+                    }}
+                    disabled={!dropoff || !dropoffCoords}
+                    className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-sm font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Add saved place"
+                    title="Add a custom saved place"
+                  >
+                    +
+                  </button>
+                )}
               </div>
+
+              {/* Add custom place modal */}
+              {showAddPlaceModal && (
+                <>
+                  <div className="fixed inset-0 z-[70] bg-black/40" onClick={() => { setShowAddPlaceModal(false); setNewPlaceLabel(""); }} />
+                  <div className="fixed inset-0 z-[71] flex items-center justify-center p-4">
+                    <div className="bg-card rounded-2xl border border-card-border shadow-xl w-full max-w-xs p-5 space-y-4 animate-fade-in">
+                      <h3 className="text-sm font-semibold text-foreground">Save this place</h3>
+                      <p className="text-xs text-foreground/50 truncate">{dropoff}</p>
+                      <input
+                        type="text"
+                        value={newPlaceLabel}
+                        onChange={(e) => setNewPlaceLabel(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newPlaceLabel.trim()) savePlace(newPlaceLabel.trim());
+                        }}
+                        placeholder='e.g. "Gym", "Mom\'s house"'
+                        maxLength={20}
+                        autoFocus
+                        className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setShowAddPlaceModal(false); setNewPlaceLabel(""); }}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-medium text-foreground/60 border border-card-border hover:bg-subtle transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => { if (newPlaceLabel.trim()) savePlace(newPlaceLabel.trim()); }}
+                          disabled={!newPlaceLabel.trim()}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-dark transition-all disabled:opacity-40"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Recent searches */}
               {recentSearches.length > 0 && (
@@ -662,8 +734,8 @@ export default function RequestRidePage() {
                 </div>
               </div>
 
-              {/* Save dropoff as Home/Work */}
-              {dropoff && dropoffCoords && (
+              {/* Save dropoff as Home/Work/Custom */}
+              {dropoff && dropoffCoords && savedPlaces.length < 8 && (
                 <div className="relative">
                   <button
                     onClick={() => setShowSaveDropdown(!showSaveDropdown)}
@@ -689,6 +761,12 @@ export default function RequestRidePage() {
                           className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-subtle transition-colors w-full text-left border-t border-card-border"
                         >
                           <span>🏢</span> Work
+                        </button>
+                        <button
+                          onClick={() => { setShowSaveDropdown(false); setShowAddPlaceModal(true); }}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-subtle transition-colors w-full text-left border-t border-card-border"
+                        >
+                          <span>⭐</span> Custom…
                         </button>
                       </div>
                     </>

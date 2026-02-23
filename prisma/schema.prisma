@@ -151,6 +151,7 @@ model RideRequest {
   platformFee      Float?
   isKinRide        Boolean    @default(false)
   riderNote        String?
+  rideType         String     @default("regular")
   shareToken       String     @unique @default(cuid())
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
