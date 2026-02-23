@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { searchAddresses, type GeocodeSuggestion, type LatLng } from "@/lib/geocode";
 
 interface AddressInputProps {
@@ -26,8 +26,11 @@ export function AddressInput({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
 
   const fetchSuggestions = useCallback(async (query: string) => {
     if (query.length < 3) {
@@ -38,6 +41,7 @@ export function AddressInput({
     const results = await searchAddresses(query);
     setSuggestions(results);
     setShowSuggestions(results.length > 0);
+    setHighlightedIndex(-1);
     setLoading(false);
   }, []);
 
@@ -53,6 +57,38 @@ export function AddressInput({
     onLocationSelect({ lat: s.lat, lng: s.lng });
     setShowSuggestions(false);
     setSuggestions([]);
+    setHighlightedIndex(-1);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+          handleSelect(suggestions[highlightedIndex]);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+        break;
+    }
   };
 
   const useCurrentLocation = async () => {
@@ -88,11 +124,14 @@ export function AddressInput({
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+        setHighlightedIndex(-1);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const isExpanded = showSuggestions && suggestions.length > 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -102,14 +141,23 @@ export function AddressInput({
       </label>
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onKeyDown={handleKeyDown}
           className={`w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors ${showCurrentLocation ? "pr-10" : ""}`}
           placeholder={placeholder}
           required
           autoComplete="off"
+          role="combobox"
+          aria-expanded={isExpanded}
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-activedescendant={
+            highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined
+          }
         />
         {showCurrentLocation && (
           <button
@@ -136,23 +184,33 @@ export function AddressInput({
           <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       )}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto animate-slide-down">
+      {isExpanded && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-label={`${label} suggestions`}
+          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto animate-slide-down"
+        >
           {suggestions.map((s, i) => (
-            <button
+            <li
               key={i}
-              type="button"
+              id={`${listboxId}-option-${i}`}
+              role="option"
+              aria-selected={i === highlightedIndex}
               onClick={() => handleSelect(s)}
-              className="w-full text-left px-3 py-2.5 text-sm hover:bg-primary/5 transition-colors border-b border-gray-50 last:border-0 flex items-start gap-2"
+              onMouseEnter={() => setHighlightedIndex(i)}
+              className={`w-full text-left px-3 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 flex items-start gap-2 cursor-pointer ${
+                i === highlightedIndex ? "bg-primary/10" : "hover:bg-primary/5"
+              }`}
             >
               <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span className="text-gray-700 line-clamp-2">{s.displayName}</span>
-            </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

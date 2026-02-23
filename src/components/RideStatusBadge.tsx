@@ -19,13 +19,17 @@ const statusLabels: Record<string, string> = {
 };
 
 export function RideStatusBadge({ status }: { status: string }) {
+  const humanLabel = statusLabels[status] || status;
+
   return (
     <span
+      role="status"
+      aria-label={`Ride status: ${humanLabel}`}
       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
         statusColors[status] || "bg-gray-100 text-gray-800"
       }`}
     >
-      {statusLabels[status] || status}
+      {humanLabel}
     </span>
   );
 }

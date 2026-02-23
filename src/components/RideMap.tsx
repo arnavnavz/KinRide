@@ -62,23 +62,34 @@ const userIcon = L.divIcon({
   iconAnchor: [10, 10],
 });
 
+function makeStopIcon(index: number) {
+  return L.divIcon({
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700">${index + 1}</div>`,
+    className: "",
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
 interface RideMapProps {
   pickup?: LatLng | null;
   dropoff?: LatLng | null;
+  stops?: Array<{ lat: number; lng: number }>;
   driverLocation?: LatLng | null;
   userLocation?: LatLng | null;
   className?: string;
   rounded?: boolean;
 }
 
-export function RideMap({ pickup, dropoff, driverLocation, userLocation, className = "", rounded = true }: RideMapProps) {
+export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocation, className = "", rounded = true }: RideMapProps) {
   const fitPoints = useMemo(() => {
     const pts: LatLng[] = [];
     if (pickup) pts.push(pickup);
+    for (const s of stops) pts.push(s);
     if (dropoff) pts.push(dropoff);
     if (driverLocation) pts.push(driverLocation);
     return pts;
-  }, [pickup, dropoff, driverLocation]);
+  }, [pickup, dropoff, stops, driverLocation]);
 
   const center = useMemo<[number, number]>(() => {
     if (pickup) return [pickup.lat, pickup.lng];
@@ -89,17 +100,26 @@ export function RideMap({ pickup, dropoff, driverLocation, userLocation, classNa
 
   const routeLine = useMemo(() => {
     if (!pickup || !dropoff) return null;
-    const latDiff = dropoff.lat - pickup.lat;
-    const lngDiff = dropoff.lng - pickup.lng;
-    const midLat = pickup.lat + latDiff * 0.5;
-    const midLng = pickup.lng + lngDiff * 0.5;
-    const offset = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 0.1;
-    return [
-      [pickup.lat, pickup.lng] as [number, number],
-      [midLat + offset * (lngDiff > 0 ? 1 : -1), midLng] as [number, number],
-      [dropoff.lat, dropoff.lng] as [number, number],
+    const waypoints: [number, number][] = [
+      [pickup.lat, pickup.lng],
+      ...stops.map((s) => [s.lat, s.lng] as [number, number]),
+      [dropoff.lat, dropoff.lng],
     ];
-  }, [pickup, dropoff]);
+    const result: [number, number][] = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const [aLat, aLng] = waypoints[i];
+      const [bLat, bLng] = waypoints[i + 1];
+      const latDiff = bLat - aLat;
+      const lngDiff = bLng - aLng;
+      const midLat = aLat + latDiff * 0.5;
+      const midLng = aLng + lngDiff * 0.5;
+      const offset = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 0.08;
+      result.push([aLat, aLng]);
+      result.push([midLat + offset * (lngDiff > 0 ? 1 : -1), midLng]);
+    }
+    result.push([dropoff.lat, dropoff.lng]);
+    return result;
+  }, [pickup, dropoff, stops]);
 
   const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
   const tileUrl = isDark
@@ -126,6 +146,9 @@ export function RideMap({ pickup, dropoff, driverLocation, userLocation, classNa
         {dropoff && (
           <Marker position={[dropoff.lat, dropoff.lng]} icon={dropoffIcon} />
         )}
+        {stops.map((stop, i) => (
+          <Marker key={`stop-${i}`} position={[stop.lat, stop.lng]} icon={makeStopIcon(i)} />
+        ))}
         {driverLocation && (
           <Marker
             position={[driverLocation.lat, driverLocation.lng]}

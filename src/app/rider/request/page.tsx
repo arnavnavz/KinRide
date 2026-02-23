@@ -7,8 +7,10 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AddressInput } from "@/components/AddressInput";
 import { Avatar } from "@/components/Avatar";
+import { NotificationBell } from "@/components/NotificationBell";
 import type { LatLng } from "@/lib/geocode";
 import { haptic } from "@/lib/haptic";
+import { formatSurgeLabel } from "@/lib/surge";
 
 const RideMap = dynamic(() => import("@/components/RideMap").then((m) => m.RideMap), {
   ssr: false,
@@ -67,6 +69,7 @@ export default function RequestRidePage() {
   const [dropoff, setDropoff] = useState("");
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<LatLng | null>(null);
+  const [stops, setStops] = useState<Array<{ address: string; coords: LatLng | null }>>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [selectedType, setSelectedType] = useState("regular");
   const [preferKin, setPreferKin] = useState(false);
@@ -78,11 +81,25 @@ export default function RequestRidePage() {
   const [error, setError] = useState("");
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<string>("");
+  const [showScheduledSuccess, setShowScheduledSuccess] = useState(false);
   const [distanceMiles, setDistanceMiles] = useState<number | null>(null);
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [showSaveDropdown, setShowSaveDropdown] = useState(false);
+  const [surge, setSurge] = useState<{ multiplier: number; label: string; color: string }>({ multiplier: 1.0, label: "", color: "" });
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [applyingPromo, setApplyingPromo] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    discountType: string;
+    discountValue: number;
+  } | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,6 +132,10 @@ export default function RequestRidePage() {
 
   useEffect(() => {
     fetch("/api/favorites").then((r) => r.json()).then(setFavorites).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/rides/surge").then((r) => r.json()).then(setSurge).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -215,8 +236,10 @@ export default function RequestRidePage() {
         body: JSON.stringify({
           pickupAddress: pickup,
           dropoffAddress: dropoff,
+          stops: stops.filter((s) => s.address && s.coords).map((s) => s.address),
           preferKin,
           specificDriverId: specificDriverId || undefined,
+          scheduledAt: scheduledAt || undefined,
         }),
       });
       if (!res.ok) {
@@ -226,7 +249,12 @@ export default function RequestRidePage() {
       }
       const ride = await res.json();
       if (dropoff && dropoffCoords) addRecentSearch(dropoff, dropoffCoords);
-      router.push(`/rider/ride/${ride.id}`);
+      if (scheduledAt) {
+        setShowScheduledSuccess(true);
+        setTimeout(() => router.push("/rider/scheduled"), 2000);
+      } else {
+        router.push(`/rider/ride/${ride.id}`);
+      }
     } catch {
       setError("Something went wrong");
     } finally {
@@ -242,8 +270,44 @@ export default function RequestRidePage() {
     return <div className="text-center py-20 text-foreground/60">This page is for riders only.</div>;
   }
 
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setApplyingPromo(true);
+    setPromoError("");
+    setPromoSuccess("");
+    try {
+      const res = await fetch("/api/promo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPromoError(data.error || "Invalid promo code");
+      } else {
+        setAppliedPromo({
+          code: data.redemption.promoCode.code,
+          discountType: data.redemption.promoCode.discountType,
+          discountValue: data.redemption.promoCode.discountValue,
+        });
+        setPromoSuccess(data.message);
+        setPromoInput("");
+      }
+    } catch {
+      setPromoError("Something went wrong");
+    }
+    setApplyingPromo(false);
+  };
+
   const selectedRide = RIDE_TYPES.find((r) => r.id === selectedType)!;
-  const fareForType = baseFare ? Math.round(baseFare * selectedRide.multiplier * 100) / 100 : null;
+  const fareForType = baseFare ? Math.round(baseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
+
+  const promoDiscount = fareForType && appliedPromo
+    ? appliedPromo.discountType === "percentage"
+      ? Math.round(fareForType * (appliedPromo.discountValue / 100) * 100) / 100
+      : Math.min(appliedPromo.discountValue, fareForType)
+    : 0;
+  const finalFare = fareForType ? Math.round((fareForType - promoDiscount) * 100) / 100 : null;
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-background overflow-hidden relative">
@@ -269,7 +333,11 @@ export default function RequestRidePage() {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-[59]" onClick={() => setMenuOpen(false)} />
-              <div className="absolute top-full left-0 mt-2 w-48 bg-card rounded-xl shadow-xl border border-card-border overflow-hidden animate-slide-down z-[61]">
+              <nav
+                role="navigation"
+                aria-label="Main menu"
+                className="absolute top-full left-0 mt-2 w-48 bg-card rounded-xl shadow-xl border border-card-border overflow-hidden animate-slide-down z-[61]"
+              >
                 <Link
                   href="/rider/chats"
                   onClick={() => setMenuOpen(false)}
@@ -291,6 +359,16 @@ export default function RequestRidePage() {
                   Ride History
                 </Link>
                 <Link
+                  href="/rider/scheduled"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Scheduled
+                </Link>
+                <Link
                   href="/rider/kin"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
@@ -300,7 +378,27 @@ export default function RequestRidePage() {
                   </svg>
                   My Kin
                 </Link>
-              </div>
+                <Link
+                  href="/rider/promos"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Promos & Referrals
+                </Link>
+                <Link
+                  href="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Profile
+                </Link>
+              </nav>
             </>
           )}
         </div>
@@ -309,11 +407,14 @@ export default function RequestRidePage() {
           <span className="text-base font-bold text-primary">Kin</span>
           <span className="text-base font-light text-foreground">Ride</span>
         </div>
-        {session?.user && (
-          <Link href="/rider/kin" className="active:scale-95 transition-transform">
-            <Avatar name={session.user.name || "U"} size="sm" />
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          {session?.user && (
+            <Link href="/rider/kin" className="active:scale-95 transition-transform">
+              <Avatar name={session.user.name || "U"} size="sm" />
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Full-screen map */}
@@ -321,6 +422,7 @@ export default function RequestRidePage() {
         <RideMap
           pickup={pickupCoords}
           dropoff={dropoffCoords}
+          stops={stops.filter((s) => s.coords).map((s) => ({ lat: s.coords!.lat, lng: s.coords!.lng }))}
           userLocation={userLocation}
           className="absolute inset-0"
           rounded={false}
@@ -352,15 +454,28 @@ export default function RequestRidePage() {
         style={{ ["--sheet-height" as string]: sheetExpanded ? "80%" : "45%" }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-2 cursor-grab" onClick={() => setSheetExpanded(!sheetExpanded)}>
+        <button
+          type="button"
+          className="flex justify-center pt-3 pb-2 cursor-grab w-full"
+          onClick={() => setSheetExpanded(!sheetExpanded)}
+          aria-label="Expand or collapse booking panel"
+        >
           <div className="w-10 h-1 bg-foreground/15 rounded-full" />
-        </div>
+        </button>
 
         <div className="flex-1 overflow-y-auto px-5 pb-5">
           {/* STEP: Search */}
           {step === "search" && (
             <div className="space-y-4 animate-fade-in">
               <h2 className="text-lg font-bold text-foreground">Where to?</h2>
+
+              {surge.multiplier > 1.0 && (
+                <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-950/40 dark:to-red-950/40 border border-amber-200/60 dark:border-amber-800/40 animate-fade-in">
+                  <span className="text-lg">⚡</span>
+                  <span className={`text-sm font-medium ${surge.color}`}>{surge.label}</span>
+                  <span className="ml-auto text-sm font-bold text-red-500">{formatSurgeLabel(surge.multiplier)}</span>
+                </div>
+              )}
 
               {/* Saved places */}
               <div className="flex gap-2">
@@ -442,24 +557,68 @@ export default function RequestRidePage() {
                 </div>
               )}
 
-              <div className="space-y-3">
-                <AddressInput
-                  value={pickup}
-                  onChange={setPickup}
-                  onLocationSelect={setPickupCoords}
-                  placeholder="Pickup location"
-                  label="Pickup"
-                  dotColor="bg-green-400"
-                  showCurrentLocation
-                />
-                <AddressInput
-                  value={dropoff}
-                  onChange={(v) => { setDropoff(v); setShowSaveDropdown(false); }}
-                  onLocationSelect={(c) => { setDropoffCoords(c); setShowSaveDropdown(false); }}
-                  placeholder="Where are you going?"
-                  label="Dropoff"
-                  dotColor="bg-primary"
-                />
+              <div className="relative">
+                <div className="absolute left-[4px] top-[10px] bottom-[10px] w-0 border-l-2 border-dotted border-foreground/20 z-0 pointer-events-none" />
+                <div className="relative z-10 space-y-3">
+                  <AddressInput
+                    value={pickup}
+                    onChange={setPickup}
+                    onLocationSelect={setPickupCoords}
+                    placeholder="Pickup location"
+                    label="Pickup"
+                    dotColor="bg-green-400"
+                    showCurrentLocation
+                  />
+
+                  {stops.map((stop, i) => (
+                    <div key={i} className="relative">
+                      <AddressInput
+                        value={stop.address}
+                        onChange={(v) => {
+                          const next = [...stops];
+                          next[i] = { ...next[i], address: v };
+                          setStops(next);
+                        }}
+                        onLocationSelect={(c) => {
+                          const next = [...stops];
+                          next[i] = { ...next[i], coords: c };
+                          setStops(next);
+                        }}
+                        placeholder={`Stop ${i + 1}`}
+                        label={`Stop ${i + 1}`}
+                        dotColor="bg-blue-400"
+                      />
+                      <button
+                        onClick={() => setStops(stops.filter((_, j) => j !== i))}
+                        className="absolute top-0 right-0 w-6 h-6 flex items-center justify-center rounded-full bg-foreground/10 hover:bg-red-100 dark:hover:bg-red-900/30 text-foreground/40 hover:text-red-500 transition-colors text-xs font-bold"
+                        aria-label={`Remove stop ${i + 1}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+
+                  {stops.length < 3 && (
+                    <button
+                      onClick={() => setStops([...stops, { address: "", coords: null }])}
+                      className="flex items-center gap-2 text-xs font-medium text-primary/70 hover:text-primary transition-colors pl-1 py-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add stop
+                    </button>
+                  )}
+
+                  <AddressInput
+                    value={dropoff}
+                    onChange={(v) => { setDropoff(v); setShowSaveDropdown(false); }}
+                    onLocationSelect={(c) => { setDropoffCoords(c); setShowSaveDropdown(false); }}
+                    placeholder="Where are you going?"
+                    label="Dropoff"
+                    dotColor="bg-primary"
+                  />
+                </div>
               </div>
 
               {/* Save dropoff as Home/Work */}
@@ -540,22 +699,31 @@ export default function RequestRidePage() {
               </div>
 
               {/* Trip summary */}
-              <div className="flex items-center gap-2 text-xs text-foreground/50 bg-subtle rounded-lg px-3 py-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full" />
-                <span className="truncate flex-1">{pickup}</span>
+              <div className="flex items-center gap-2 text-xs text-foreground/50 bg-subtle rounded-lg px-3 py-2 flex-wrap">
+                <span className="w-2 h-2 bg-green-400 rounded-full shrink-0" />
+                <span className="truncate max-w-[120px]">{pickup}</span>
+                {stops.filter((s) => s.address).map((s, i) => (
+                  <span key={i} className="contents">
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    <span className="w-2 h-2 bg-blue-400 rounded-full shrink-0" />
+                    <span className="truncate max-w-[120px]">{s.address}</span>
+                  </span>
+                ))}
                 <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                <span className="w-2 h-2 bg-primary rounded-full" />
-                <span className="truncate flex-1">{dropoff}</span>
+                <span className="w-2 h-2 bg-primary rounded-full shrink-0" />
+                <span className="truncate max-w-[120px]">{dropoff}</span>
               </div>
 
               {/* Ride type cards */}
-              <div className="space-y-2">
+              <div role="radiogroup" aria-label="Ride type" className="space-y-2">
                 {RIDE_TYPES.map((type) => {
-                  const price = baseFare ? Math.round(baseFare * type.multiplier * 100) / 100 : null;
+                  const price = baseFare ? Math.round(baseFare * type.multiplier * surge.multiplier * 100) / 100 : null;
                   const isSelected = selectedType === type.id;
                   return (
                     <button
                       key={type.id}
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => { setSelectedType(type.id); haptic(); }}
                       className={`w-full text-left rounded-xl p-4 flex items-center gap-4 transition-all border ${
                         isSelected
@@ -571,11 +739,18 @@ export default function RequestRidePage() {
                         </div>
                         <p className="text-xs text-foreground/50">{type.desc}</p>
                       </div>
-                      {price && (
-                        <span className={`text-sm font-bold shrink-0 ${isSelected ? "text-primary" : "text-foreground/70"}`}>
-                          ${price.toFixed(2)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {price && (
+                          <span className={`text-sm font-bold ${isSelected ? "text-primary" : "text-foreground/70"}`}>
+                            ${price.toFixed(2)}
+                          </span>
+                        )}
+                        {surge.multiplier > 1.0 && (
+                          <span className="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 rounded-full">
+                            {formatSurgeLabel(surge.multiplier)}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
@@ -593,6 +768,26 @@ export default function RequestRidePage() {
           {/* STEP: Confirm */}
           {step === "confirm" && (
             <div className="space-y-4 animate-fade-in">
+              {showScheduledSuccess && (
+                <div className="fixed inset-0 z-[100] bg-background/90 flex flex-col items-center justify-center animate-fade-in">
+                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-xl font-bold text-foreground">Ride scheduled!</p>
+                  <p className="text-sm text-foreground/50 mt-1">
+                    {(() => {
+                      const d = new Date(scheduledAt);
+                      return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) +
+                        " at " +
+                        d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+                    })()}
+                  </p>
+                  <p className="text-xs text-foreground/40 mt-3">Redirecting to scheduled rides…</p>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <button onClick={() => setStep("select-type")} className="p-1 text-foreground/50 hover:text-foreground transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -617,16 +812,193 @@ export default function RequestRidePage() {
                   )}
                 </div>
 
+                {surge.multiplier > 1.0 && (
+                  <div className="flex items-center justify-between text-sm border-t border-card-border pt-3">
+                    <span className="text-foreground/60 flex items-center gap-1.5">
+                      <span>⚡</span> Surge pricing ({surge.label})
+                    </span>
+                    <span className="font-semibold text-red-500">{formatSurgeLabel(surge.multiplier)}</span>
+                  </div>
+                )}
+
                 <div className="border-t border-card-border pt-3 space-y-2">
                   <div className="flex items-start gap-2">
                     <span className="w-2 h-2 bg-green-400 rounded-full mt-1.5 shrink-0" />
                     <span className="text-sm text-foreground/70">{pickup}</span>
                   </div>
+                  {stops.filter((s) => s.address).map((s, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="w-2 h-2 bg-blue-400 rounded-full mt-1.5 shrink-0" />
+                      <span className="text-sm text-foreground/70">{s.address}</span>
+                    </div>
+                  ))}
                   <div className="flex items-start gap-2">
                     <span className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />
                     <span className="text-sm text-foreground/70">{dropoff}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Schedule for later */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    const next = !scheduleMode;
+                    setScheduleMode(next);
+                    if (!next) setScheduledAt("");
+                    haptic();
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                    scheduleMode
+                      ? "border-primary bg-primary/5"
+                      : "border-card-border bg-card hover:border-primary/30"
+                  }`}
+                >
+                  <svg className={`w-5 h-5 shrink-0 ${scheduleMode ? "text-primary" : "text-foreground/40"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className={`text-sm font-medium ${scheduleMode ? "text-primary" : "text-foreground"}`}>
+                    Schedule for later
+                  </span>
+                  <div
+                    className={`ml-auto relative w-10 h-6 rounded-full transition-colors ${
+                      scheduleMode ? "bg-primary" : "bg-foreground/20"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        scheduleMode ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {scheduleMode && (
+                  <div className="animate-fade-in space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={scheduledAt ? scheduledAt.split("T")[0] : ""}
+                        min={new Date().toISOString().split("T")[0]}
+                        onChange={(e) => {
+                          const time = scheduledAt ? scheduledAt.split("T")[1] || "" : "";
+                          if (e.target.value && time) {
+                            setScheduledAt(`${e.target.value}T${time}`);
+                          } else if (e.target.value) {
+                            const now = new Date();
+                            now.setMinutes(now.getMinutes() + 30);
+                            const hh = String(now.getHours()).padStart(2, "0");
+                            const mm = String(now.getMinutes()).padStart(2, "0");
+                            setScheduledAt(`${e.target.value}T${hh}:${mm}`);
+                          }
+                        }}
+                        className="flex-1 bg-subtle border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      />
+                      <input
+                        type="time"
+                        value={scheduledAt ? scheduledAt.split("T")[1] || "" : ""}
+                        onChange={(e) => {
+                          const date = scheduledAt ? scheduledAt.split("T")[0] : new Date().toISOString().split("T")[0];
+                          if (e.target.value) {
+                            setScheduledAt(`${date}T${e.target.value}`);
+                          }
+                        }}
+                        className="flex-1 bg-subtle border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      />
+                    </div>
+
+                    {scheduledAt && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-lg animate-fade-in">
+                        <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-sm text-primary font-medium">
+                          {(() => {
+                            const d = new Date(scheduledAt);
+                            if (isNaN(d.getTime())) return "Pick a date & time";
+                            return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) +
+                              " at " +
+                              d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Promo code */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setPromoExpanded(!promoExpanded);
+                    setPromoError("");
+                    setPromoSuccess("");
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                    appliedPromo
+                      ? "border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
+                      : promoExpanded
+                        ? "border-primary bg-primary/5"
+                        : "border-card-border bg-card hover:border-primary/30"
+                  }`}
+                >
+                  <svg className={`w-5 h-5 shrink-0 ${appliedPromo ? "text-green-500" : promoExpanded ? "text-primary" : "text-foreground/40"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  <span className={`text-sm font-medium ${appliedPromo ? "text-green-600 dark:text-green-400" : promoExpanded ? "text-primary" : "text-foreground"}`}>
+                    {appliedPromo ? `${appliedPromo.code} applied` : "Have a promo code?"}
+                  </span>
+                  {appliedPromo && promoDiscount > 0 && (
+                    <span className="ml-auto text-sm font-bold text-green-500">-${promoDiscount.toFixed(2)}</span>
+                  )}
+                  {!appliedPromo && (
+                    <svg className={`w-4 h-4 ml-auto text-foreground/30 transition-transform ${promoExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
+
+                {promoExpanded && !appliedPromo && (
+                  <div className="animate-fade-in space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                        placeholder="Enter code"
+                        className="flex-1 bg-subtle border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary font-mono tracking-wider"
+                        onKeyDown={(e) => e.key === "Enter" && handleApplyPromo()}
+                      />
+                      <button
+                        onClick={handleApplyPromo}
+                        disabled={applyingPromo || !promoInput.trim()}
+                        className="bg-primary text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-all disabled:opacity-40 active:scale-[0.98] shrink-0"
+                      >
+                        {applyingPromo ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          "Apply"
+                        )}
+                      </button>
+                    </div>
+                    {promoError && (
+                      <p className="text-xs text-red-500 px-1">{promoError}</p>
+                    )}
+                    {promoSuccess && (
+                      <p className="text-xs text-green-500 px-1">{promoSuccess}</p>
+                    )}
+                  </div>
+                )}
+
+                {appliedPromo && fareForType && (
+                  <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg animate-fade-in text-sm">
+                    <span className="text-foreground/60">
+                      <span className="line-through">${fareForType.toFixed(2)}</span>
+                    </span>
+                    <span className="font-bold text-green-600 dark:text-green-400">${finalFare?.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
 
               {/* Kin preferences */}
@@ -678,16 +1050,20 @@ export default function RequestRidePage() {
 
               <button
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || (scheduleMode && !scheduledAt)}
                 className="w-full bg-primary text-white py-3.5 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all disabled:opacity-50 shadow-lg shadow-primary/20 active:scale-[0.98]"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Finding a driver...
+                    {scheduleMode ? "Scheduling…" : "Finding a driver..."}
                   </span>
-                ) : fareForType ? (
-                  `Confirm ${selectedRide.label} · $${fareForType.toFixed(2)}`
+                ) : scheduleMode && (finalFare ?? fareForType) ? (
+                  `Schedule ${selectedRide.label} · $${(finalFare ?? fareForType)!.toFixed(2)}`
+                ) : scheduleMode ? (
+                  `Schedule ${selectedRide.label}`
+                ) : (finalFare ?? fareForType) ? (
+                  `Confirm ${selectedRide.label} · $${(finalFare ?? fareForType)!.toFixed(2)}`
                 ) : (
                   `Confirm ${selectedRide.label}`
                 )}

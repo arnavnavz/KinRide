@@ -188,7 +188,7 @@ export default function LandingPage() {
               Keep up to 100% of your fares with KinPro. Build loyal riders who request you directly. No surge-chasing — just steady, trusted income.
             </p>
             <Link
-              href="/auth/signin"
+              href="/auth/driver-signup"
               className="inline-flex items-center gap-2 bg-card text-primary border border-primary/20 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/10 transition-colors active:scale-[0.97]"
             >
               Start Driving

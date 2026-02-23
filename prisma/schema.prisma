@@ -60,6 +60,10 @@ model User {
   ratings             Rating[]              @relation("RiderRatings")
   ratingsReceived     Rating[]              @relation("DriverRatings")
   loyaltyTransactions LoyaltyTransaction[]  @relation("LoyaltyUser")
+  notifications       Notification[]        @relation("UserNotifications")
+  promoRedemptions    PromoRedemption[]     @relation("UserPromos")
+  referralsMade       Referral[]            @relation("ReferrerReferrals")
+  referralsUsed       Referral[]            @relation("RefereeReferrals")
 }
 
 model DriverProfile {
@@ -221,4 +225,62 @@ model Rating {
 
   @@unique([rideRequestId, riderId])
   @@index([driverId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserNotifications", fields: [userId], references: [id])
+  title     String
+  body      String
+  type      String   // "ride_update", "message", "loyalty", "promo", "system"
+  linkUrl   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model PromoCode {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  description    String
+  discountType   String
+  discountValue  Float
+  maxUses        Int?
+  usesCount      Int      @default(0)
+  minFare        Float?
+  expiresAt      DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  redemptions PromoRedemption[]
+}
+
+model PromoRedemption {
+  id            String    @id @default(cuid())
+  promoCodeId   String
+  promoCode     PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId        String
+  user          User      @relation("UserPromos", fields: [userId], references: [id])
+  rideRequestId String?
+  discount      Float
+  createdAt     DateTime  @default(now())
+
+  @@unique([promoCodeId, userId])
+  @@index([userId])
+}
+
+model Referral {
+  id           String   @id @default(cuid())
+  referrerId   String
+  referrer     User     @relation("ReferrerReferrals", fields: [referrerId], references: [id])
+  refereeId    String?
+  referee      User?    @relation("RefereeReferrals", fields: [refereeId], references: [id])
+  referralCode String   @unique
+  rewardAmount Float    @default(5.00)
+  isRedeemed   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([referrerId])
 }

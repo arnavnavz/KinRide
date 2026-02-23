@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Avatar } from "@/components/Avatar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggleButton } from "@/components/ThemeToggle";
 
 function NavLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick?: () => void }) {
@@ -67,6 +68,9 @@ export function Navbar() {
           <NavLink href="/driver/earnings" onClick={closeMenu}>Earnings</NavLink>
         </>
       )}
+      {session.user.role === "ADMIN" && (
+        <NavLink href="/admin" onClick={closeMenu}>Admin</NavLink>
+      )}
       <NavLink href={chatsHref} onClick={closeMenu}>
         <span className="flex items-center gap-1.5">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +99,8 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-4 text-sm">
           {navLinks}
           <div className="flex items-center gap-3 ml-2 pl-4 border-l border-gray-200">
-            <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Avatar name={session.user.name || "U"} size="xs" />
               <span className="text-gray-500 text-xs">
                 {session.user.name}
@@ -103,7 +108,7 @@ export function Navbar() {
                   {session.user.role}
                 </span>
               </span>
-            </div>
+            </Link>
             <ThemeToggleButton />
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
@@ -137,7 +142,7 @@ export function Navbar() {
         <div className="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-lg px-4 pb-4 pt-2 space-y-3 text-sm shadow-lg animate-slide-down">
           {navLinks}
           <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <Link href="/profile" onClick={closeMenu} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Avatar name={session.user.name || "U"} size="xs" />
               <span className="text-gray-500 text-xs">
                 {session.user.name}
@@ -145,7 +150,7 @@ export function Navbar() {
                   {session.user.role}
                 </span>
               </span>
-            </div>
+            </Link>
             <ThemeToggleButton />
             <button
               onClick={() => signOut({ callbackUrl: "/" })}

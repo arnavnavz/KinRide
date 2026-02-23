@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
+import Link from "next/link";
 
 function SignInForm() {
   const router = useRouter();
@@ -84,7 +85,16 @@ function SignInForm() {
           </button>
         </form>
 
-        <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div className="mt-4 text-center animate-fade-in">
+          <p className="text-sm text-gray-500">
+            Want to drive?{" "}
+            <Link href="/auth/driver-signup" className="text-primary font-medium hover:underline">
+              Sign up as a driver
+            </Link>
+          </p>
+        </div>
+
+        <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <p className="text-xs text-gray-500 mb-2 font-medium">Demo Accounts (password: password123)</p>
           <div className="space-y-1 text-xs text-gray-600">
             <p><span className="font-medium">Riders:</span> alice@kinride.com, bob@kinride.com</p>

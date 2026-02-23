@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { estimateFare } from "@/lib/pricing";
+import { getSurgeMultiplier } from "@/lib/surge";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const fare = await estimateFare(pickupAddress, dropoffAddress);
-    return NextResponse.json({ estimatedFare: fare });
+    return NextResponse.json({ estimatedFare: fare, surge: getSurgeMultiplier() });
   } catch (err) {
     console.error("POST /api/rides/estimate error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

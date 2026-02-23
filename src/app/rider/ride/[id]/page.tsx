@@ -3,11 +3,13 @@
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { RideStatusBadge } from "@/components/RideStatusBadge";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Avatar } from "@/components/Avatar";
 import { haptic } from "@/lib/haptic";
+import { showLocalNotification } from "@/lib/notifications";
 import { CardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { useSocket } from "@/hooks/useSocket";
@@ -78,6 +80,7 @@ export default function RiderRidePage() {
   const [loading, setLoading] = useState(true);
   const [showSOS, setShowSOS] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<LatLng | null>(null);
   const [driverCoords, setDriverCoords] = useState<LatLng | null>(null);
@@ -109,7 +112,16 @@ export default function RiderRidePage() {
   }, [rideId, loadRide, joinRide]);
 
   useEffect(() => {
-    const unsub1 = onEvent("ride:status", () => loadRide());
+    const unsub1 = onEvent("ride:status", (data: unknown) => {
+      loadRide();
+      const statusData = data as { status?: string };
+      if (statusData?.status === "ARRIVING") {
+        showLocalNotification("Driver is arriving!", { body: "Your driver is almost at the pickup location." });
+      }
+      if (statusData?.status === "COMPLETED") {
+        showLocalNotification("Ride completed!", { body: "Thanks for riding with KinRide." });
+      }
+    });
     const unsub2 = onEvent("ride:accepted", () => loadRide());
     return () => { unsub1(); unsub2(); };
   }, [onEvent, loadRide]);
@@ -212,7 +224,18 @@ export default function RiderRidePage() {
     const url = `${window.location.origin}/trip/${ride.shareToken}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
+    setShowShareMenu(false);
     toast("Trip link copied!", "success");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareEta = () => {
+    if (!ride) return;
+    const url = `${window.location.origin}/trip/${ride.shareToken}/eta`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setShowShareMenu(false);
+    toast("ETA link copied!", "success");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -321,12 +344,43 @@ export default function RiderRidePage() {
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={shareTrip}
-            className="text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            {copied ? "Link copied!" : "Share Trip"}
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowShareMenu((v) => !v)}
+              className="text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+            >
+              {copied ? "Link copied!" : "Share"}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showShareMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 min-w-[160px] animate-fade-in">
+                  <button
+                    onClick={shareTrip}
+                    className="w-full text-left px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" />
+                    </svg>
+                    Share Trip Link
+                  </button>
+                  <button
+                    onClick={shareEta}
+                    className="w-full text-left px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Share Live ETA
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={() => setShowSOS(true)}
             className="text-xs bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors font-medium"
@@ -476,6 +530,17 @@ export default function RiderRidePage() {
           >
             {canceling ? "Canceling..." : "Cancel Ride"}
           </button>
+        )}
+        {ride.status === "COMPLETED" && (
+          <Link
+            href={`/rider/ride/${ride.id}/receipt`}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-primary/10 text-primary py-2.5 rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors active:scale-[0.98]"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            View Receipt
+          </Link>
         )}
         {ride.status === "COMPLETED" && ride.driver && !hasRated && (
           <button
