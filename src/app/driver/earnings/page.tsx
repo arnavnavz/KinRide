@@ -1,0 +1,219 @@
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useToast } from "@/components/Toast";
+import { Avatar } from "@/components/Avatar";
+import { EarningsSkeleton } from "@/components/Skeleton";
+
+interface RideEarning {
+  id: string;
+  pickup: string;
+  dropoff: string;
+  riderName: string;
+  gross: number;
+  fee: number;
+  net: number;
+  isKinRide: boolean;
+  commissionRate: number;
+  date: string;
+}
+
+interface EarningsData {
+  plan: string;
+  summary: {
+    today: { gross: number; fees: number; net: number };
+    week: { gross: number; fees: number; net: number };
+    allTime: { gross: number; fees: number; net: number };
+    totalRides: number;
+    kinRideCount: number;
+  };
+  rides: RideEarning[];
+}
+
+export default function EarningsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [data, setData] = useState<EarningsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [changingPlan, setChangingPlan] = useState(false);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/auth/signin");
+  }, [status, router]);
+
+  useEffect(() => {
+    fetch("/api/driver/earnings")
+      .then((r) => r.json())
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const togglePlan = async () => {
+    if (!data) return;
+    setChangingPlan(true);
+    const newPlan = data.plan === "KIN_PRO" ? "FREE" : "KIN_PRO";
+    try {
+      const res = await fetch("/api/driver/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: newPlan }),
+      });
+      if (res.ok) {
+        const sub = await res.json();
+        setData((d) => d ? { ...d, plan: sub.plan } : d);
+        toast(newPlan === "KIN_PRO" ? "Upgraded to KinPro!" : "Switched to Free plan", "success");
+      } else {
+        toast("Failed to change plan", "error");
+      }
+    } catch {
+      toast("Failed to change plan", "error");
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
+  if (status === "loading" || loading) {
+    return <EarningsSkeleton />;
+  }
+
+  if (session?.user?.role !== "DRIVER") {
+    return <div className="text-center py-20 text-gray-500">This page is for drivers only.</div>;
+  }
+
+  if (!data) {
+    return <div className="text-center py-20 text-gray-500">Failed to load earnings.</div>;
+  }
+
+  const isKinPro = data.plan === "KIN_PRO";
+  const kinPct = data.summary.totalRides > 0
+    ? Math.round((data.summary.kinRideCount / data.summary.totalRides) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Earnings</h1>
+          <p className="text-gray-500 text-sm mt-1">Your detailed earnings breakdown</p>
+        </div>
+        <button
+          onClick={() => router.push("/driver/dashboard")}
+          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+
+      {/* Plan status */}
+      <div className={`rounded-2xl border p-5 transition-colors ${isKinPro ? "bg-primary/5 border-primary/20" : "bg-white border-gray-100"}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-700">
+                {isKinPro ? "KinPro Plan" : "Free Plan"}
+              </h2>
+              {isKinPro && (
+                <span className="text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-medium">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {isKinPro
+                ? "0% commission on Kin rides · 20% on standard rides"
+                : "10% commission on Kin rides · 20% on standard rides"}
+            </p>
+          </div>
+          <button
+            onClick={togglePlan}
+            disabled={changingPlan}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 active:scale-[0.97] ${
+              isKinPro
+                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                : "bg-primary text-white hover:bg-primary-dark"
+            }`}
+          >
+            {changingPlan ? "..." : isKinPro ? "Downgrade" : "Upgrade to KinPro — $30/week"}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { label: "Today", ...data.summary.today },
+          { label: "This Week", ...data.summary.week },
+          { label: "All Time", ...data.summary.allTime },
+        ].map((period) => (
+          <div key={period.label} className="bg-white rounded-2xl border border-gray-100 p-5 card-hover">
+            <p className="text-xs text-gray-400 mb-1">{period.label}</p>
+            <p className="text-2xl font-bold text-gray-800">${period.net.toFixed(2)}</p>
+            <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
+              <span>${period.gross.toFixed(2)} gross</span>
+              <span>-${period.fees.toFixed(2)} fees</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p className="text-2xl font-bold text-gray-800">{data.summary.totalRides}</p>
+            <p className="text-xs text-gray-400">Total rides</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-primary">{data.summary.kinRideCount}</p>
+            <p className="text-xs text-gray-400">Kin rides</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-800">{kinPct}%</p>
+            <p className="text-xs text-gray-400">Kin rate</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Ride list */}
+      {data.rides.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Recent Rides</h2>
+          <div className="space-y-2">
+            {data.rides.map((ride) => (
+              <div
+                key={ride.id}
+                className="bg-white rounded-xl border border-gray-100 p-4 card-hover"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
+                    <Avatar name={ride.riderName} size="xs" />
+                    <span className="text-sm font-medium text-gray-700 truncate">
+                      {ride.pickup} → {ride.dropoff}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {ride.isKinRide && (
+                      <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                        Kin
+                      </span>
+                    )}
+                    <span className="text-sm font-bold text-green-600">+${ride.net.toFixed(2)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-400 ml-10">
+                  <span>{ride.riderName} · {new Date(ride.date).toLocaleDateString()}</span>
+                  <span>
+                    ${ride.gross.toFixed(2)} - ${ride.fee.toFixed(2)} fee ({ride.commissionRate}%)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

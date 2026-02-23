@@ -1,0 +1,224 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  RIDER
+  DRIVER
+  ADMIN
+}
+
+enum RideStatus {
+  REQUESTED
+  OFFERED
+  ACCEPTED
+  ARRIVING
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum DriverPlan {
+  FREE
+  KIN_PRO
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(RIDER)
+  phone        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  driverProfile       DriverProfile?
+  driverSubscription  DriverSubscription?
+  riderLoyalty        RiderLoyalty?
+  favorites           FavoriteDriver[]      @relation("RiderFavorites")
+  favoritedBy         FavoriteDriver[]      @relation("DriverFavorited")
+  rideRequests        RideRequest[]         @relation("RiderRequests")
+  ridesAsDriver       RideRequest[]         @relation("DriverRides")
+  rideOffers          RideOffer[]           @relation("DriverOffers")
+  sentMessages        Message[]             @relation("SentMessages")
+  receivedMessages    Message[]             @relation("ReceivedMessages")
+  conversations1      Conversation[]        @relation("ConvUser1")
+  conversations2      Conversation[]        @relation("ConvUser2")
+  directMessages      DirectMessage[]       @relation("DMSender")
+  ratings             Rating[]              @relation("RiderRatings")
+  ratingsReceived     Rating[]              @relation("DriverRatings")
+  loyaltyTransactions LoyaltyTransaction[]  @relation("LoyaltyUser")
+}
+
+model DriverProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  user         User    @relation(fields: [userId], references: [id])
+  vehicleMake  String
+  vehicleModel String
+  vehicleYear  Int
+  vehicleColor String
+  licensePlate String
+  isVerified   Boolean @default(false)
+  isOnline     Boolean @default(false)
+  kinCode      String  @unique
+  lastKnownLat Float?
+  lastKnownLng Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isOnline, isVerified])
+}
+
+model DriverSubscription {
+  id        String     @id @default(cuid())
+  driverId  String     @unique
+  driver    User       @relation(fields: [driverId], references: [id])
+  plan      DriverPlan @default(FREE)
+  expiresAt DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model RiderLoyalty {
+  id            String  @id @default(cuid())
+  riderId       String  @unique
+  rider         User    @relation(fields: [riderId], references: [id])
+  credits       Int     @default(0)
+  lifetimeRides Int     @default(0)
+  streakWeeks   Int     @default(0)
+  lastRideWeek  String?
+
+  @@index([riderId])
+}
+
+model LoyaltyTransaction {
+  id            String   @id @default(cuid())
+  riderId       String
+  rider         User     @relation("LoyaltyUser", fields: [riderId], references: [id])
+  amount        Int
+  reason        String
+  rideRequestId String?
+  createdAt     DateTime @default(now())
+
+  @@index([riderId, createdAt])
+}
+
+model FavoriteDriver {
+  id        String   @id @default(cuid())
+  riderId   String
+  driverId  String
+  rider     User     @relation("RiderFavorites", fields: [riderId], references: [id])
+  driver    User     @relation("DriverFavorited", fields: [driverId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([riderId, driverId])
+}
+
+model RideRequest {
+  id               String     @id @default(cuid())
+  riderId          String
+  rider            User       @relation("RiderRequests", fields: [riderId], references: [id])
+  driverId         String?
+  driver           User?      @relation("DriverRides", fields: [driverId], references: [id])
+  pickupAddress    String
+  dropoffAddress   String
+  status           RideStatus @default(REQUESTED)
+  preferKin        Boolean    @default(false)
+  specificDriverId String?
+  scheduledAt      DateTime?
+  estimatedFare    Float?
+  platformFee      Float?
+  isKinRide        Boolean    @default(false)
+  shareToken       String     @unique @default(cuid())
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  offers   RideOffer[]
+  messages Message[]
+  ratings  Rating[]
+
+  @@index([riderId, status])
+  @@index([driverId, status])
+}
+
+model RideOffer {
+  id            String      @id @default(cuid())
+  rideRequestId String
+  rideRequest   RideRequest @relation(fields: [rideRequestId], references: [id])
+  driverId      String
+  driver        User        @relation("DriverOffers", fields: [driverId], references: [id])
+  status        OfferStatus @default(PENDING)
+  offeredAt     DateTime    @default(now())
+  expiresAt     DateTime
+  respondedAt   DateTime?
+
+  @@index([driverId, status, expiresAt])
+  @@index([rideRequestId, status])
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  rideRequestId String
+  rideRequest   RideRequest @relation(fields: [rideRequestId], references: [id])
+  senderId      String
+  sender        User        @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId    String
+  receiver      User        @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content       String
+  createdAt     DateTime    @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  user1     User     @relation("ConvUser1", fields: [user1Id], references: [id])
+  user2     User     @relation("ConvUser2", fields: [user2Id], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages DirectMessage[]
+
+  @@unique([user1Id, user2Id])
+}
+
+model DirectMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation("DMSender", fields: [senderId], references: [id])
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model Rating {
+  id            String      @id @default(cuid())
+  rideRequestId String
+  rideRequest   RideRequest @relation(fields: [rideRequestId], references: [id])
+  riderId       String
+  rider         User        @relation("RiderRatings", fields: [riderId], references: [id])
+  driverId      String
+  driver        User        @relation("DriverRatings", fields: [driverId], references: [id])
+  stars         Int
+  comment       String?
+  createdAt     DateTime    @default(now())
+
+  @@unique([rideRequestId, riderId])
+  @@index([driverId])
+}
