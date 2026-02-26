@@ -41,6 +41,8 @@ model User {
   passwordHash String
   role         Role     @default(RIDER)
   phone        String?
+  stripeCustomerId       String?   @unique
+  defaultPaymentMethodId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -71,21 +73,22 @@ model User {
 }
 
 model DriverProfile {
-  id           String  @id @default(cuid())
-  userId       String  @unique
-  user         User    @relation(fields: [userId], references: [id])
-  vehicleMake  String
-  vehicleModel String
-  vehicleYear  Int
-  vehicleColor String
-  licensePlate String
-  isVerified   Boolean @default(false)
-  isOnline     Boolean @default(false)
-  kinCode      String  @unique
-  lastKnownLat Float?
-  lastKnownLng Float?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    String  @id @default(cuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id])
+  vehicleMake           String
+  vehicleModel          String
+  vehicleYear           Int
+  vehicleColor          String
+  licensePlate          String
+  isVerified            Boolean @default(false)
+  isOnline              Boolean @default(false)
+  kinCode               String  @unique
+  stripeConnectAccountId String?
+  lastKnownLat          Float?
+  lastKnownLng          Float?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([isOnline, isVerified])
 }
@@ -160,9 +163,26 @@ model RideRequest {
   messages Message[]
   ratings  Rating[]
   tips     Tip[]
+  payment  RidePayment?
 
   @@index([riderId, status])
   @@index([driverId, status])
+}
+
+model RidePayment {
+  id                   String      @id @default(cuid())
+  rideRequestId        String      @unique
+  rideRequest          RideRequest @relation(fields: [rideRequestId], references: [id])
+  amountTotal          Float
+  walletAmountUsed     Float       @default(0)
+  cardAmountCharged    Float       @default(0)
+  stripePaymentIntentId String?
+  stripeTransferId     String?
+  status               String      @default("pending") // pending, succeeded, failed, refunded
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@index([rideRequestId])
 }
 
 model RideOffer {

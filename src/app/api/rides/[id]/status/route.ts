@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { rideStatusSchema } from "@/lib/validations";
 import { RideStatus } from "@prisma/client";
 import { computeCommission, computeLoyaltyCredits, getCurrentWeek } from "@/lib/pricing";
+import { chargeRide } from "@/lib/charge-ride";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   REQUESTED: ["CANCELED"],
@@ -130,7 +131,19 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(updated);
+    // Charge rider when ride is completed
+    let paymentError: string | undefined;
+    if (newStatus === "COMPLETED") {
+      const chargeResult = await chargeRide(id);
+      if (!chargeResult.success && chargeResult.error) {
+        paymentError = chargeResult.error;
+      }
+    }
+
+    return NextResponse.json({
+      ...updated,
+      ...(paymentError ? { paymentError } : {}),
+    });
   } catch (err) {
     console.error("POST /api/rides/[id]/status error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

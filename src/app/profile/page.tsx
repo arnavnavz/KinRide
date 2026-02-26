@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -294,6 +295,27 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Payment methods */}
+          <Link
+            href="/profile/payment-methods"
+            className="flex items-center justify-between bg-card rounded-2xl border border-card-border p-5 mb-4 hover:border-primary/30 transition-colors active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Payment methods</h2>
+                <p className="text-xs text-foreground/50">Add a card for rides and tips</p>
+              </div>
+            </div>
+            <svg className="w-5 h-5 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
 
           {/* Change Password */}
           <div className="bg-card rounded-2xl border border-card-border p-5 mb-4">

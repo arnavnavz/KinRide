@@ -190,8 +190,18 @@ export default function RequestRidePage() {
   };
 
   const fetchFareEstimate = useCallback(async () => {
-    if (!pickup || !dropoff || pickup.length < 3 || dropoff.length < 3) return;
+    if (!pickupCoords || !dropoffCoords) return;
     setEstimatingFare(true);
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
+    const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
+    const straightMiles = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const roadMiles = straightMiles * 1.3;
+    setDistanceMiles(Math.round(roadMiles * 10) / 10);
+    setDurationMinutes(Math.round(roadMiles * 2.5));
+    // Client-side fallback: same formula as server (BASE_FEE 3 + PER_MILE 2)
+    const clientEstimate = Math.round((3 + roadMiles * 2) * 100) / 100;
     try {
       const res = await fetch("/api/rides/estimate", {
         method: "POST",
@@ -200,18 +210,14 @@ export default function RequestRidePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setBaseFare(data.estimatedFare);
-        if (pickupCoords && dropoffCoords) {
-          const toRad = (d: number) => (d * Math.PI) / 180;
-          const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
-          const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
-          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
-          const straight = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          setDistanceMiles(Math.round(straight * 1.3 * 10) / 10);
-          setDurationMinutes(Math.round(straight * 1.3 * 2.5));
-        }
+        const serverFare = data?.estimatedFare;
+        setBaseFare(typeof serverFare === "number" ? serverFare : clientEstimate);
+      } else {
+        setBaseFare(clientEstimate);
       }
-    } catch { /* ignore */ }
+    } catch {
+      setBaseFare(clientEstimate);
+    }
     setEstimatingFare(false);
   }, [pickup, dropoff, pickupCoords, dropoffCoords]);
 
@@ -327,7 +333,23 @@ export default function RequestRidePage() {
   };
 
   const selectedRide = RIDE_TYPES.find((r) => r.id === selectedType)!;
-  const fareForType = baseFare ? Math.round(baseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
+  // Show price from API or client-side estimate when we have coords (so price always shows when booking)
+  const displayBaseFare =
+    baseFare ??
+    (pickupCoords && dropoffCoords
+      ? (() => {
+          const toRad = (d: number) => (d * Math.PI) / 180;
+          const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
+          const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
+          const straight = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const roadMiles = straight * 1.3;
+          return Math.round((3 + roadMiles * 2) * 100) / 100;
+        })()
+      : null);
+  const fareForType = displayBaseFare ? Math.round(displayBaseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
 
   const promoDiscount = fareForType && appliedPromo
     ? appliedPromo.discountType === "percentage"
@@ -623,7 +645,7 @@ export default function RequestRidePage() {
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && newPlaceLabel.trim()) savePlace(newPlaceLabel.trim());
                         }}
-                        placeholder='e.g. "Gym", "Mom\'s house"'
+                        placeholder={`e.g. "Gym", "Mom's house"`}
                         maxLength={20}
                         autoFocus
                         className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
@@ -781,19 +803,25 @@ export default function RequestRidePage() {
                 </div>
               )}
 
-              {baseFare && distanceMiles && durationMinutes && (
+              {(displayBaseFare != null || distanceMiles != null || durationMinutes != null) && (
                 <div className="flex items-center justify-between bg-primary/5 rounded-xl px-4 py-3 animate-fade-in">
                   <div className="flex items-center gap-4 text-sm text-foreground/70">
-                    <span className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                      {distanceMiles} mi
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      ~{durationMinutes} min
-                    </span>
+                    {distanceMiles != null && (
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                        {distanceMiles} mi
+                      </span>
+                    )}
+                    {durationMinutes != null && (
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        ~{durationMinutes} min
+                      </span>
+                    )}
                   </div>
-                  <span className="text-lg font-bold text-primary">${baseFare.toFixed(2)}</span>
+                  {displayBaseFare != null && (
+                    <span className="text-lg font-bold text-primary">${displayBaseFare.toFixed(2)}</span>
+                  )}
                 </div>
               )}
 
@@ -836,7 +864,7 @@ export default function RequestRidePage() {
               {/* Ride type cards */}
               <div role="radiogroup" aria-label="Ride type" className="space-y-2">
                 {RIDE_TYPES.map((type) => {
-                  const price = baseFare ? Math.round(baseFare * type.multiplier * surge.multiplier * 100) / 100 : null;
+                  const price = displayBaseFare ? Math.round(displayBaseFare * type.multiplier * surge.multiplier * 100) / 100 : null;
                   const isSelected = selectedType === type.id;
                   return (
                     <button

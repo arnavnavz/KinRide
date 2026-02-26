@@ -34,6 +34,7 @@ export async function GET(
             sender: { select: { id: true, name: true } },
           },
         },
+        payment: true,
       },
     });
 

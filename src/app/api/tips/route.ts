@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { stripe, stripeEnabled, toStripeAmount } from "@/lib/stripe";
 
 export async function GET(req: NextRequest) {
   try {
@@ -74,6 +75,44 @@ export async function POST(req: NextRequest) {
     });
     if (existing) {
       return NextResponse.json({ error: "Already tipped on this ride" }, { status: 409 });
+    }
+
+    // Charge rider's card if Stripe is enabled
+    if (stripeEnabled() && stripe) {
+      const rider = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { stripeCustomerId: true, defaultPaymentMethodId: true },
+      });
+      if (rider?.stripeCustomerId && rider?.defaultPaymentMethodId) {
+        try {
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: toStripeAmount(amount),
+            currency: "usd",
+            customer: rider.stripeCustomerId,
+            payment_method: rider.defaultPaymentMethodId,
+            confirm: true,
+            off_session: true,
+            automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+            metadata: { type: "tip", rideRequestId, driverId: ride.driverId },
+          });
+          if (paymentIntent.status !== "succeeded") {
+            return NextResponse.json(
+              { error: "Tip charge failed. Try a different payment method." },
+              { status: 402 }
+            );
+          }
+        } catch {
+          return NextResponse.json(
+            { error: "Tip charge failed. Update your payment method and try again." },
+            { status: 402 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "Add a payment method in Profile to tip." },
+          { status: 400 }
+        );
+      }
     }
 
     const [tip] = await prisma.$transaction([

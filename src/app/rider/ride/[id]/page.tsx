@@ -47,6 +47,7 @@ interface Ride {
       kinCode: string;
     } | null;
   } | null;
+  payment?: { status: string } | null;
 }
 
 function simulateDriverLocation(pickup: LatLng, status: string): LatLng | null {
@@ -85,6 +86,7 @@ export default function RiderRidePage() {
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<LatLng | null>(null);
   const [driverCoords, setDriverCoords] = useState<LatLng | null>(null);
+  const [hasRealLocation, setHasRealLocation] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [addingKin, setAddingKin] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -106,6 +108,7 @@ export default function RiderRidePage() {
   const [splitCount, setSplitCount] = useState(2);
   const [splitLoading, setSplitLoading] = useState(false);
   const [splitLink, setSplitLink] = useState("");
+  const [retryingPayment, setRetryingPayment] = useState(false);
   const { joinRide, onEvent } = useSocket();
 
   const loadRide = useCallback(async () => {
@@ -582,6 +585,43 @@ export default function RiderRidePage() {
           </div>
         )}
       </div>
+
+      {/* Payment failed banner */}
+      {ride.status === "COMPLETED" && ride.payment?.status === "failed" && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-sm text-foreground animate-fade-in space-y-3">
+          <p className="font-medium text-amber-700 dark:text-amber-400">Payment could not be completed</p>
+          <p className="text-foreground/70">Add a payment method and retry, or pay with wallet balance.</p>
+          <div className="flex gap-2">
+            <button
+              disabled={retryingPayment}
+              onClick={async () => {
+                setRetryingPayment(true);
+                try {
+                  const res = await fetch(`/api/rides/${ride.id}/retry-payment`, { method: "POST" });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast("Payment successful!", "success");
+                    loadRide();
+                  } else {
+                    toast(data.error ?? "Payment failed", "error");
+                  }
+                } finally {
+                  setRetryingPayment(false);
+                }
+              }}
+              className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60"
+            >
+              {retryingPayment ? "Retrying…" : "Retry payment"}
+            </button>
+            <Link
+              href="/profile/payment-methods"
+              className="flex-1 py-2 rounded-lg border border-card-border text-center text-sm font-medium text-foreground hover:bg-subtle transition-colors"
+            >
+              Add card
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Fare breakdown */}
       {ride.estimatedFare && (
