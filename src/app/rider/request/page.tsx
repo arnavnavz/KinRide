@@ -10,6 +10,8 @@ import { Avatar } from "@/components/Avatar";
 import { NotificationBell } from "@/components/NotificationBell";
 import type { LatLng } from "@/lib/geocode";
 import { haptic } from "@/lib/haptic";
+import { useI18n } from "@/lib/i18n-context";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatSurgeLabel } from "@/lib/surge";
 import { fetchRoute } from "@/lib/routing";
 
@@ -30,10 +32,10 @@ interface RideType {
 }
 
 const RIDE_TYPES: RideType[] = [
-  { id: "regular", label: "KinRide", desc: "Affordable everyday rides", icon: "🚗", multiplier: 1.0, eta: "3-5 min" },
-  { id: "xl", label: "KinRide XL", desc: "Extra space for groups", icon: "🚙", multiplier: 1.5, eta: "5-8 min" },
-  { id: "premium", label: "KinRide Premium", desc: "Top-rated drivers, luxury feel", icon: "✨", multiplier: 2.0, eta: "5-10 min" },
-  { id: "pool", label: "KinRide Pool", desc: "Share your ride, save up to 30%", icon: "👥", multiplier: 0.7, eta: "5-12 min" },
+  { id: "regular", label: "ride_type.regular", desc: "ride_type.regular_desc", icon: "🚗", multiplier: 1.0, eta: "3-5 min" },
+  { id: "xl", label: "ride_type.xl", desc: "ride_type.xl_desc", icon: "🚙", multiplier: 1.5, eta: "5-8 min" },
+  { id: "premium", label: "ride_type.premium", desc: "ride_type.premium_desc", icon: "✨", multiplier: 2.0, eta: "5-10 min" },
+  { id: "pool", label: "ride_type.pool", desc: "ride_type.pool_desc", icon: "👥", multiplier: 0.7, eta: "5-12 min" },
 ];
 
 interface SavedPlace {
@@ -65,6 +67,7 @@ interface Favorite {
 export default function RequestRidePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useI18n();
 
   const [step, setStep] = useState<BookingStep>("search");
   const [pickup, setPickup] = useState("");
@@ -273,6 +276,7 @@ export default function RequestRidePage() {
           specificDriverId: specificDriverId || undefined,
           scheduledAt: scheduledAt || undefined,
           riderNote: riderNote.trim() || undefined,
+          ...(pickupCoords ? { riderLat: pickupCoords.lat, riderLng: pickupCoords.lng } : {}),
         }),
       });
       if (!res.ok) {
@@ -385,8 +389,18 @@ export default function RequestRidePage() {
               <nav
                 role="navigation"
                 aria-label="Main menu"
-                className="absolute top-full left-0 mt-2 w-48 bg-card rounded-xl shadow-xl border border-card-border overflow-hidden animate-slide-down z-[61]"
+                className="absolute top-full left-0 mt-2 w-48 bg-card rounded-xl shadow-xl border border-card-border overflow-y-auto max-h-[70vh] animate-slide-down z-[61]"
               >
+                <Link
+                  href="/rider/ai"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  {t("nav.ai_assistant")}
+                </Link>
                 <Link
                   href="/rider/chats"
                   onClick={() => setMenuOpen(false)}
@@ -395,7 +409,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  Chats
+                  {t("nav.chats")}
                 </Link>
                 <Link
                   href="/rider/history"
@@ -405,7 +419,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Ride History
+                  {t("nav.history")}
                 </Link>
                 <Link
                   href="/rider/scheduled"
@@ -415,7 +429,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Scheduled
+                  {t("nav.scheduled")}
                 </Link>
                 <Link
                   href="/rider/kin"
@@ -425,7 +439,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  My Kin
+                  {t("nav.my_kin")}
                 </Link>
                 <Link
                   href="/rider/wallet"
@@ -435,7 +449,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
-                  Wallet
+                  {t("nav.wallet")}
                 </Link>
                 <Link
                   href="/rider/promos"
@@ -445,7 +459,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
-                  Promos & Referrals
+                  {t("nav.promos")}
                 </Link>
                 <Link
                   href="/rider/support"
@@ -455,7 +469,7 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  Support
+                  {t("nav.support")}
                 </Link>
                 <Link
                   href="/profile"
@@ -465,8 +479,11 @@ export default function RequestRidePage() {
                   <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  Profile
+                  {t("nav.profile")}
                 </Link>
+                <div className="px-3 py-3 border-t border-card-border">
+                  <LanguageSwitcher compact />
+                </div>
               </nav>
             </>
           )}
@@ -515,6 +532,21 @@ export default function RequestRidePage() {
         )}
       </div>
 
+      {/* Floating AI assistant button */}
+      <Link
+        href="/rider/ai"
+        className="absolute right-4 z-[35] flex items-center bg-gradient-to-br from-primary to-violet-500 text-white rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 active:scale-95 transition-all duration-200"
+        style={{ bottom: sheetExpanded ? 'calc(80vh + 12px)' : step === 'search' ? 'calc(45vh + 12px)' : 'calc(55vh + 12px)' }}
+        aria-label="AI Assistant"
+      >
+        <div className="w-12 h-12 flex items-center justify-center relative">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+        </div>
+      </Link>
+
       {/* Bottom sheet */}
       <div
         ref={sheetRef}
@@ -537,7 +569,7 @@ export default function RequestRidePage() {
           {/* STEP: Search */}
           {step === "search" && (
             <div className="space-y-4 animate-fade-in">
-              <h2 className="text-lg font-bold text-foreground">Where to?</h2>
+              <h2 className="text-lg font-bold text-foreground">{t("booking.where_to")}</h2>
 
               {surge.multiplier > 1.0 && (
                 <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-950/40 dark:to-red-950/40 border border-amber-200/60 dark:border-amber-800/40 animate-fade-in">
@@ -842,7 +874,7 @@ export default function RequestRidePage() {
                 <button onClick={() => { setStep("search"); setSheetExpanded(false); }} className="p-1 text-foreground/50 hover:text-foreground transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
-                <h2 className="text-lg font-bold text-foreground">Choose a ride</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("booking.choose_ride")}</h2>
               </div>
 
               {/* Trip summary */}
@@ -881,10 +913,10 @@ export default function RequestRidePage() {
                       <span className="text-3xl">{type.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-foreground">{type.label}</span>
+                          <span className="font-semibold text-sm text-foreground">{t(type.label)}</span>
                           <span className="text-[10px] text-foreground/40">{type.eta}</span>
                         </div>
-                        <p className="text-xs text-foreground/50">{type.desc}</p>
+                        <p className="text-xs text-foreground/50">{t(type.desc)}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {price && (
@@ -951,7 +983,7 @@ export default function RequestRidePage() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{selectedRide.icon}</span>
                   <div>
-                    <p className="font-semibold text-sm text-foreground">{selectedRide.label}</p>
+                    <p className="font-semibold text-sm text-foreground">{t(selectedRide.label)}</p>
                     <p className="text-xs text-foreground/50">{selectedRide.eta} · {distanceMiles} mi · ~{durationMinutes} min</p>
                   </div>
                   {fareForType && (
@@ -1005,7 +1037,7 @@ export default function RequestRidePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className={`text-sm font-medium ${scheduleMode ? "text-primary" : "text-foreground"}`}>
-                    Schedule for later
+                    {t("booking.schedule_later")}
                   </span>
                   <div
                     className={`ml-auto relative w-10 h-6 rounded-full transition-colors ${
@@ -1204,7 +1236,7 @@ export default function RequestRidePage() {
                     className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                   />
                   <div>
-                    <span className="text-sm text-foreground">Prefer Kin drivers</span>
+                    <span className="text-sm text-foreground">{t("booking.prefer_kin")}</span>
                     <p className="text-[11px] text-foreground/40">Lower commission — your driver keeps more</p>
                   </div>
                 </label>
@@ -1246,16 +1278,16 @@ export default function RequestRidePage() {
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {scheduleMode ? "Scheduling…" : "Finding a driver..."}
+                    {scheduleMode ? t("booking.scheduling") : t("booking.finding_driver")}
                   </span>
                 ) : scheduleMode && (finalFare ?? fareForType) ? (
-                  `Schedule ${selectedRide.label} · $${(finalFare ?? fareForType)!.toFixed(2)}`
+                  `${t("booking.schedule_later")} · ${(finalFare ?? fareForType)!.toFixed(2)}`
                 ) : scheduleMode ? (
-                  `Schedule ${selectedRide.label}`
+                  t("booking.schedule_later")
                 ) : (finalFare ?? fareForType) ? (
-                  `Confirm ${selectedRide.label} · $${(finalFare ?? fareForType)!.toFixed(2)}`
+                  `${t("booking.confirm_ride")} · ${(finalFare ?? fareForType)!.toFixed(2)}`
                 ) : (
-                  `Confirm ${selectedRide.label}`
+                  t("booking.confirm_ride")
                 )}
               </button>
             </div>

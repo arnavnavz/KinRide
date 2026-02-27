@@ -1,4 +1,4 @@
-import { geocodeAddress } from "./geocode";
+import { geocodeAddress, type LatLng } from "./geocode";
 import type { DriverPlan } from "@prisma/client";
 
 const BASE_FEE = 3.0;
@@ -22,11 +22,12 @@ function haversineDistance(
 
 export async function estimateFare(
   pickupAddress: string,
-  dropoffAddress: string
+  dropoffAddress: string,
+  nearLocation?: LatLng
 ): Promise<number | null> {
   const [pickup, dropoff] = await Promise.all([
-    geocodeAddress(pickupAddress),
-    geocodeAddress(dropoffAddress),
+    geocodeAddress(pickupAddress, nearLocation),
+    geocodeAddress(dropoffAddress, nearLocation),
   ]);
 
   if (!pickup || !dropoff) return null;
@@ -38,6 +39,10 @@ export async function estimateFare(
     dropoff.lng
   );
 
+  // Sanity check: reject obviously wrong geocoding (> 500 miles straight-line)
+  const MAX_REASONABLE_MILES = 500;
+  if (miles > MAX_REASONABLE_MILES) return null;
+
   // Road distance is ~1.3x straight-line
   const roadMiles = miles * 1.3;
   const fare = BASE_FEE + roadMiles * PER_MILE_RATE;
@@ -46,9 +51,10 @@ export async function estimateFare(
 }
 
 const COMMISSION_RATES = {
-  standard: 0.2,
-  kin_free: 0.1,
-  kin_pro: 0.0,
+  standard: 0.15,
+  standard_kinpro: 0.10,
+  kin: 0.08,
+  kin_kinpro: 0.0,
 } as const;
 
 export function computeCommission(
@@ -58,12 +64,14 @@ export function computeCommission(
 ): { rate: number; fee: number } {
   let rate: number;
 
-  if (!isKinRide) {
-    rate = COMMISSION_RATES.standard;
+  if (isKinRide && driverPlan === "KIN_PRO") {
+    rate = COMMISSION_RATES.kin_kinpro;
+  } else if (isKinRide) {
+    rate = COMMISSION_RATES.kin;
   } else if (driverPlan === "KIN_PRO") {
-    rate = COMMISSION_RATES.kin_pro;
+    rate = COMMISSION_RATES.standard_kinpro;
   } else {
-    rate = COMMISSION_RATES.kin_free;
+    rate = COMMISSION_RATES.standard;
   }
 
   const fee = Math.round(fare * rate * 100) / 100;
@@ -71,9 +79,10 @@ export function computeCommission(
 }
 
 export function getCommissionLabel(isKinRide: boolean, driverPlan?: DriverPlan): string {
-  if (!isKinRide) return "20% commission";
-  if (driverPlan === "KIN_PRO") return "0% commission (KinPro)";
-  return "10% commission (Kin)";
+  if (isKinRide && driverPlan === "KIN_PRO") return "0% commission";
+  if (isKinRide) return "8% commission";
+  if (driverPlan === "KIN_PRO") return "10% commission";
+  return "15% commission";
 }
 
 // ISO week string e.g. "2026-W08"

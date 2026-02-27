@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
+import { useI18n } from "@/lib/i18n-context";
 import { EarningsSkeleton } from "@/components/Skeleton";
 
 interface EarningsData {
@@ -73,6 +74,7 @@ function generateDailyEarnings(weeklyNet: number): { day: string; amount: number
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useI18n();
   const [data, setData] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -132,25 +134,25 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-          <p className="text-foreground/50 text-sm mt-1">Performance insights and trends</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("driver.analytics")}</h1>
+          <p className="text-foreground/50 text-sm mt-1">{t("driver.performance")}</p>
         </div>
         <button
           onClick={() => router.push("/driver/earnings")}
           className="text-sm text-foreground/50 hover:text-foreground transition-colors"
         >
-          View Earnings
+          {t("driver.view_earnings")}
         </button>
       </div>
 
       {/* Earnings Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Today", value: data.summary.today.net, sub: `$${data.summary.today.gross.toFixed(2)} gross` },
-          { label: "This Week", value: data.summary.week.net, sub: `$${data.summary.week.gross.toFixed(2)} gross` },
-          { label: "This Month", value: data.summary.allTime.net, sub: `${data.summary.totalRides} rides total` },
+          { key: "today", label: t("driver.today"), value: data.summary.today.net, sub: `$${data.summary.today.gross.toFixed(2)} ${t("driver.gross")}` },
+          { key: "week", label: t("driver.this_week"), value: data.summary.week.net, sub: `$${data.summary.week.gross.toFixed(2)} ${t("driver.gross")}` },
+          { key: "month", label: t("driver.this_month"), value: data.summary.allTime.net, sub: `${data.summary.totalRides} ${t("driver.rides_total")}` },
         ].map((item) => (
-          <div key={item.label} className="bg-card rounded-2xl border border-card-border p-5">
+          <div key={item.key} className="bg-card rounded-2xl border border-card-border p-5">
             <p className="text-xs text-foreground/40 mb-1">{item.label}</p>
             <p className="text-3xl font-bold text-foreground">${item.value.toFixed(2)}</p>
             <p className="text-xs text-foreground/40 mt-1">{item.sub}</p>
@@ -160,7 +162,7 @@ export default function AnalyticsPage() {
 
       {/* Earnings Chart */}
       <div className="bg-card rounded-2xl border border-card-border p-5">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Daily Earnings (Past 7 Days)</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-4">{t("driver.daily_earnings")}</h2>
         <div className="flex items-end gap-2 h-40">
           {dailyEarnings.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -181,25 +183,25 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
           <p className="text-2xl font-bold text-foreground">{acceptanceRate.toFixed(0)}%</p>
-          <p className="text-xs text-foreground/40 mt-1">Acceptance Rate</p>
+          <p className="text-xs text-foreground/40 mt-1">{t("driver.acceptance_rate")}</p>
         </div>
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
           <p className="text-2xl font-bold text-amber-500">{avgRating.toFixed(1)}</p>
-          <p className="text-xs text-foreground/40 mt-1">Avg Rating</p>
+          <p className="text-xs text-foreground/40 mt-1">{t("driver.avg_rating")}</p>
         </div>
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
           <p className="text-2xl font-bold text-foreground">{data.summary.totalRides}</p>
-          <p className="text-xs text-foreground/40 mt-1">Completed Rides</p>
+          <p className="text-xs text-foreground/40 mt-1">{t("driver.completed_rides")}</p>
         </div>
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
           <p className="text-2xl font-bold text-green-500">${totalTips.toFixed(2)}</p>
-          <p className="text-xs text-foreground/40 mt-1">Tips Earned</p>
+          <p className="text-xs text-foreground/40 mt-1">{t("driver.tips_earned")}</p>
         </div>
       </div>
 
       {/* Ride Type Breakdown */}
       <div className="bg-card rounded-2xl border border-card-border p-5">
-        <h2 className="text-sm font-semibold text-foreground mb-3">Ride Type Breakdown</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-3">{t("driver.ride_type_breakdown")}</h2>
         <div className="w-full h-6 rounded-full overflow-hidden flex">
           <div
             className="bg-primary h-full transition-all"
@@ -217,23 +219,23 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-5 mt-3 text-xs text-foreground/60">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-            Regular {rideTypeBreakdown.regular}%
+            {t("ride_type.regular")} {rideTypeBreakdown.regular}%
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 dark:bg-amber-500" />
-            XL {rideTypeBreakdown.xl}%
+            {t("ride_type.xl")} {rideTypeBreakdown.xl}%
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-            Premium {rideTypeBreakdown.premium}%
+            {t("ride_type.premium")} {rideTypeBreakdown.premium}%
           </span>
         </div>
       </div>
 
       {/* Peak Hours Heatmap */}
       <div className="bg-card rounded-2xl border border-card-border p-5">
-        <h2 className="text-sm font-semibold text-foreground mb-1">Peak Hours</h2>
-        <p className="text-xs text-foreground/40 mb-4">Busiest times based on demand patterns</p>
+        <h2 className="text-sm font-semibold text-foreground mb-1">{t("driver.peak_hours")}</h2>
+        <p className="text-xs text-foreground/40 mb-4">{t("driver.peak_hours_desc")}</p>
         <div className="overflow-x-auto">
           <div className="min-w-[600px]">
             {/* Hour labels */}
@@ -268,11 +270,11 @@ export default function AnalyticsPage() {
             ))}
             {/* Legend */}
             <div className="flex items-center gap-2 mt-3 ml-10">
-              <span className="text-[10px] text-foreground/30">Quiet</span>
+              <span className="text-[10px] text-foreground/30">{t("driver.quiet")}</span>
               {PEAK_COLORS.map((color, i) => (
                 <div key={i} className={`w-4 h-3 rounded-sm ${color}`} />
               ))}
-              <span className="text-[10px] text-foreground/30">Busy</span>
+              <span className="text-[10px] text-foreground/30">{t("driver.busy")}</span>
             </div>
           </div>
         </div>

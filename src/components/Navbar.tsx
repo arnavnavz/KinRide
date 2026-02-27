@@ -7,6 +7,8 @@ import { useState, useEffect } from "react";
 import { Avatar } from "@/components/Avatar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggleButton } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n-context";
 
 function NavLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick?: () => void }) {
   const pathname = usePathname();
@@ -29,6 +31,7 @@ function NavLink({ href, children, onClick }: { href: string; children: React.Re
 
 export function Navbar() {
   const { data: session } = useSession();
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -58,15 +61,15 @@ export function Navbar() {
     <>
       {!isDriver && (
         <>
-          <NavLink href="/rider/request" onClick={closeMenu}>Request Ride</NavLink>
-          <NavLink href="/rider/kin" onClick={closeMenu}>My Kin</NavLink>
+          <NavLink href="/rider/request" onClick={closeMenu}>{t("nav.request_ride")}</NavLink>
+          <NavLink href="/rider/kin" onClick={closeMenu}>{t("nav.my_kin")}</NavLink>
         </>
       )}
       {isDriver && (
         <>
-          <NavLink href="/driver/dashboard" onClick={closeMenu}>Dashboard</NavLink>
-          <NavLink href="/driver/earnings" onClick={closeMenu}>Earnings</NavLink>
-          <NavLink href="/driver/analytics" onClick={closeMenu}>Analytics</NavLink>
+          <NavLink href="/driver/dashboard" onClick={closeMenu}>{t("driver.dashboard")}</NavLink>
+          <NavLink href="/driver/earnings" onClick={closeMenu}>{t("driver.earnings")}</NavLink>
+          <NavLink href="/driver/analytics" onClick={closeMenu}>{t("driver.analytics")}</NavLink>
         </>
       )}
       {session.user.role === "ADMIN" && (
@@ -77,7 +80,7 @@ export function Navbar() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-          Chats
+          {t("nav.chats")}
           {unreadCount > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-fade-in-scale">
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -115,8 +118,9 @@ export function Navbar() {
               onClick={() => signOut({ callbackUrl: "/" })}
               className="text-gray-400 hover:text-danger transition-colors"
             >
-              Sign out
+              {t("nav.sign_out")}
             </button>
+            <LanguageSwitcher compact />
           </div>
         </div>
 
@@ -157,7 +161,7 @@ export function Navbar() {
               onClick={() => signOut({ callbackUrl: "/" })}
               className="text-gray-400 hover:text-danger transition-colors text-xs"
             >
-              Sign out
+              {t("nav.sign_out")}
             </button>
           </div>
         </div>

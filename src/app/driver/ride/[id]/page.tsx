@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
+import { useI18n } from "@/lib/i18n-context";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { RideStatusBadge } from "@/components/RideStatusBadge";
@@ -41,14 +42,15 @@ interface Ride {
 }
 
 const statusFlow: Record<string, { next: string; label: string }> = {
-  ACCEPTED: { next: "ARRIVING", label: "I'm on my way" },
-  ARRIVING: { next: "IN_PROGRESS", label: "Start Ride" },
-  IN_PROGRESS: { next: "COMPLETED", label: "Complete Ride" },
+  ACCEPTED: { next: "ARRIVING", label: t("driver.on_my_way") },
+  ARRIVING: { next: "IN_PROGRESS", label: t("driver.start_ride") },
+  IN_PROGRESS: { next: "COMPLETED", label: t("driver.complete_ride") },
 };
 
 export default function DriverRidePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const { toast } = useToast();
   const rideId = params.id as string;
@@ -209,14 +211,14 @@ export default function DriverRidePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">Active Ride</h1>
+          <h1 className="text-xl font-bold">{t("driver.active_ride")}</h1>
           <RideStatusBadge status={ride.status} />
         </div>
         <button
           onClick={() => router.push("/driver/dashboard")}
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          Back to Dashboard
+          {t("driver.back_to_dashboard")}
         </button>
       </div>
 
@@ -240,7 +242,7 @@ export default function DriverRidePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span className="text-sm font-medium text-gray-700">Share My Location</span>
+            <span className="text-sm font-medium text-gray-700">{t("driver.share_location")}</span>
           </div>
           <button
             onClick={() => setSharingLocation((v) => !v)}

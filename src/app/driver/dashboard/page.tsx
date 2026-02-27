@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Avatar } from "@/components/Avatar";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import { useI18n } from "@/lib/i18n-context";
 
 interface DriverProfile {
   kinCode: string;
@@ -79,6 +80,7 @@ export default function DriverDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [profile, setProfile] = useState<DriverProfile | null>(null);
   const [offers, setOffers] = useState<RideOffer[]>([]);
   const [activeRides, setActiveRides] = useState<ActiveRide[]>([]);
@@ -230,7 +232,7 @@ export default function DriverDashboard() {
           <div className="flex items-center gap-3">
             <Avatar name={session?.user?.name || "D"} size="md" online={profile?.isOnline} />
             <div>
-              <h1 className="text-xl font-bold">Driver Dashboard</h1>
+              <h1 className="text-xl font-bold">{t("driver.dashboard")}</h1>
               {profile && (
                 <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-gray-500">
@@ -241,7 +243,7 @@ export default function DriverDashboard() {
                   </span>
                   {profile.isVerified && (
                     <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
-                      Verified
+                      {t("driver.verified")}
                     </span>
                   )}
                   {isKinPro && (
@@ -265,7 +267,7 @@ export default function DriverDashboard() {
           >
             {toggling ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : profile?.isOnline ? "Online" : "Go Online"}
+            ) : profile?.isOnline ? t("driver.go_offline") : t("driver.go_online")}
           </button>
         </div>
       </div>
@@ -274,30 +276,30 @@ export default function DriverDashboard() {
       {earnings && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">Earnings</h2>
+            <h2 className="text-sm font-semibold text-gray-700">{t("driver.earnings")}</h2>
             <button
               onClick={() => router.push("/driver/earnings")}
               className="text-xs text-primary hover:underline"
             >
-              View details
+              {t("driver.view_details")}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">Today</p>
+              <p className="text-xs text-gray-400 mb-0.5">{t("driver.today")}</p>
               <p className="text-xl font-bold text-gray-800">${earnings.summary.today.net.toFixed(2)}</p>
               {earnings.summary.today.fees > 0 && (
                 <p className="text-[10px] text-gray-400">
-                  ${earnings.summary.today.gross.toFixed(2)} gross · ${earnings.summary.today.fees.toFixed(2)} fees
+                  ${earnings.summary.today.gross.toFixed(2)} ${t("driver.gross")} · ${earnings.summary.today.fees.toFixed(2)} ${t("driver.fees")}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">This week</p>
+              <p className="text-xs text-gray-400 mb-0.5">{t("driver.this_week")}</p>
               <p className="text-xl font-bold text-gray-800">${earnings.summary.week.net.toFixed(2)}</p>
               {earnings.summary.week.fees > 0 && (
                 <p className="text-[10px] text-gray-400">
-                  ${earnings.summary.week.gross.toFixed(2)} gross · ${earnings.summary.week.fees.toFixed(2)} fees
+                  ${earnings.summary.week.gross.toFixed(2)} ${t("driver.gross")} · ${earnings.summary.week.fees.toFixed(2)} ${t("driver.fees")}
                 </p>
               )}
             </div>
@@ -308,15 +310,15 @@ export default function DriverDashboard() {
               <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-700">Upgrade to KinPro</p>
-                    <p className="text-xs text-gray-500 mt-0.5">$30/week flat fee. 0% commission on Kin rides.</p>
+                    <p className="text-sm font-semibold text-gray-700">{t("driver.upgrade_kinpro")}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{t("driver.kinpro_desc")}</p>
                   </div>
                   <button
                     onClick={upgradeToKinPro}
                     disabled={upgradingPlan}
                     className="bg-primary text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shrink-0 active:scale-[0.97]"
                   >
-                    {upgradingPlan ? "..." : "Upgrade"}
+                    {upgradingPlan ? "..." : t("driver.upgrade")}
                   </button>
                 </div>
               </div>
@@ -328,26 +330,26 @@ export default function DriverDashboard() {
       {/* Incoming Offers */}
       <div>
         <h2 className="text-lg font-semibold mb-3">
-          Incoming Ride Offers ({offers.length})
+          {t("driver.incoming_offers")} ({offers.length})
         </h2>
 
         {!profile?.isOnline && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-700 mb-3 animate-fade-in">
-            You are currently offline. Go online to receive ride offers.
+            {t("driver.offline_warning")}
           </div>
         )}
 
         {offers.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-            No incoming offers right now.
+            {t("driver.no_offers")}
           </div>
         ) : (
           <div className="space-y-3">
             {offers.map((offer) => {
               const isKinRide = offer.rideRequest.preferKin || offer.rideRequest.isKinRide;
               const commissionLabel = isKinRide
-                ? isKinPro ? "0% commission" : "10% commission"
-                : "20% commission";
+                ? isKinPro ? "0% commission" : "8% commission"
+                : isKinPro ? "10% commission" : "15% commission";
               const commissionColor = isKinRide
                 ? "bg-green-100 text-green-700"
                 : "bg-gray-100 text-gray-500";
@@ -402,14 +404,14 @@ export default function DriverDashboard() {
                         disabled={decliningId === offer.rideRequestId}
                         className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 active:scale-[0.97]"
                       >
-                        {decliningId === offer.rideRequestId ? "..." : "Decline"}
+                        {decliningId === offer.rideRequestId ? "..." : t("driver.decline")}
                       </button>
                       <button
                         onClick={() => acceptOffer(offer.rideRequestId)}
                         disabled={acceptingId === offer.rideRequestId}
                         className="px-4 py-2 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50 active:scale-[0.97]"
                       >
-                        {acceptingId === offer.rideRequestId ? "Accepting..." : "Accept"}
+                        {acceptingId === offer.rideRequestId ? "Accepting..." : t("driver.accept")}
                       </button>
                     </div>
                   </div>
@@ -423,7 +425,7 @@ export default function DriverDashboard() {
       {/* Active Rides */}
       {activeRides.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Active Rides</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("driver.active_rides")}</h2>
           <div className="space-y-2">
             {activeRides.map((ride) => (
               <button
@@ -441,7 +443,7 @@ export default function DriverDashboard() {
                   <RideStatusBadge status={ride.status} />
                 </div>
                 <div className="text-xs text-gray-400 ml-10">
-                  Rider: {ride.rider.name}
+                  {t("driver.rider")}: {ride.rider.name}
                 </div>
               </button>
             ))}

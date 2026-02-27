@@ -11,14 +11,19 @@ export interface GeocodeSuggestion {
 
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
 
-export async function geocodeAddress(address: string): Promise<LatLng | null> {
+export async function geocodeAddress(
+  address: string,
+  nearLocation?: LatLng
+): Promise<LatLng | null> {
   if (!address || address.length < 3) return null;
 
   try {
-    const res = await fetch(
-      `${NOMINATIM_BASE}/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-      { headers: { "User-Agent": "KinRide/1.0" } }
-    );
+    let url = `${NOMINATIM_BASE}/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+    if (nearLocation) {
+      const delta = 2;
+      url += `&viewbox=${nearLocation.lng - delta},${nearLocation.lat + delta},${nearLocation.lng + delta},${nearLocation.lat - delta}&bounded=0`;
+    }
+    const res = await fetch(url, { headers: { "User-Agent": "KinRide/1.0" } });
     const data = await res.json();
     if (data.length > 0) {
       return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };

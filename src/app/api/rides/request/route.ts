@@ -20,8 +20,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { pickupAddress, dropoffAddress, preferKin, specificDriverId, scheduledAt, riderNote, rideType } = parsed.data;
+    const { riderLat, riderLng } = body;
 
-    const fare = await estimateFare(pickupAddress, dropoffAddress);
+    const nearLocation = (typeof riderLat === "number" && typeof riderLng === "number") ? { lat: riderLat, lng: riderLng } : undefined;
+    const fare = await estimateFare(pickupAddress, dropoffAddress, nearLocation);
 
     // Determine if this is a Kin ride (requesting specific driver or preferring Kin)
     let isKinRide = false;

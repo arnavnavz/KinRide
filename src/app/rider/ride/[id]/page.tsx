@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
+import { useI18n } from "@/lib/i18n-context";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
@@ -75,6 +76,7 @@ function getStatusMessage(status: string): string {
 export default function RiderRidePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { t } = useI18n();
   const params = useParams();
   const { toast } = useToast();
   const rideId = params.id as string;
@@ -444,7 +446,7 @@ export default function RiderRidePage() {
                 disabled={!cancelReason || canceling}
                 className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-40"
               >
-                {canceling ? "Canceling..." : "Cancel Ride"}
+                {canceling ? "Canceling..." : t("ride.cancel_ride")}
               </button>
             </div>
           </div>
@@ -455,7 +457,7 @@ export default function RiderRidePage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Your Ride</h1>
+            <h1 className="text-xl font-bold">{t("ride.your_ride")}</h1>
             <RideStatusBadge status={ride.status} />
           </div>
           {statusMsg && (
@@ -468,7 +470,7 @@ export default function RiderRidePage() {
               onClick={() => setShowShareMenu((v) => !v)}
               className="text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
             >
-              {copied ? "Link copied!" : "Share"}
+              {copied ? "Link copied!" : t("common.share")}
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -504,7 +506,7 @@ export default function RiderRidePage() {
             onClick={() => setShowSOS(true)}
             className="text-xs bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors font-medium"
           >
-            SOS
+            {t("ride.sos")}
           </button>
         </div>
       </div>

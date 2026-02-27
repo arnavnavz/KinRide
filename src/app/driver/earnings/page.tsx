@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
 import { EarningsSkeleton } from "@/components/Skeleton";
+import { useI18n } from "@/lib/i18n-context";
 
 interface RideEarning {
   id: string;
@@ -35,6 +36,7 @@ interface EarningsData {
 export default function EarningsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useI18n();
   const { toast } = useToast();
   const [data, setData] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,14 +98,14 @@ export default function EarningsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Earnings</h1>
-          <p className="text-gray-500 text-sm mt-1">Your detailed earnings breakdown</p>
+          <h1 className="text-2xl font-bold">{t("driver.earnings")}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t("driver.performance")}</p>
         </div>
         <button
           onClick={() => router.push("/driver/dashboard")}
           className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
-          Back to Dashboard
+          {t("driver.back_to_dashboard")}
         </button>
       </div>
 
@@ -113,7 +115,7 @@ export default function EarningsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-700">
-                {isKinPro ? "KinPro Plan" : "Free Plan"}
+                {isKinPro ? t("driver.kinpro_plan") : t("driver.free_plan")}
               </h2>
               {isKinPro && (
                 <span className="text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-medium">
@@ -123,8 +125,8 @@ export default function EarningsPage() {
             </div>
             <p className="text-xs text-gray-500 mt-1">
               {isKinPro
-                ? "0% commission on Kin rides · 20% on standard rides"
-                : "10% commission on Kin rides · 20% on standard rides"}
+                ? "0% commission on Kin rides · 10% on standard rides"
+                : "8% commission on Kin rides · 15% on standard rides"}
             </p>
           </div>
           <button
@@ -136,7 +138,7 @@ export default function EarningsPage() {
                 : "bg-primary text-white hover:bg-primary-dark"
             }`}
           >
-            {changingPlan ? "..." : isKinPro ? "Downgrade" : "Upgrade to KinPro — $30/week"}
+            {changingPlan ? "..." : isKinPro ? t("driver.downgrade") : t("driver.upgrade_kinpro") + " — $30/month"}
           </button>
         </div>
       </div>
@@ -144,16 +146,16 @@ export default function EarningsPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Today", ...data.summary.today },
-          { label: "This Week", ...data.summary.week },
-          { label: "All Time", ...data.summary.allTime },
+          { labelKey: "driver.today", ...data.summary.today },
+          { labelKey: "driver.this_week", ...data.summary.week },
+          { labelKey: "driver.all_time", ...data.summary.allTime },
         ].map((period) => (
-          <div key={period.label} className="bg-white rounded-2xl border border-gray-100 p-5 card-hover">
-            <p className="text-xs text-gray-400 mb-1">{period.label}</p>
+          <div key={period.labelKey} className="bg-white rounded-2xl border border-gray-100 p-5 card-hover">
+            <p className="text-xs text-gray-400 mb-1">{t(period.labelKey)}</p>
             <p className="text-2xl font-bold text-gray-800">${period.net.toFixed(2)}</p>
             <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
-              <span>${period.gross.toFixed(2)} gross</span>
-              <span>-${period.fees.toFixed(2)} fees</span>
+              <span>${period.gross.toFixed(2)} {t("driver.gross")}</span>
+              <span>-${period.fees.toFixed(2)} {t("driver.fees")}</span>
             </div>
           </div>
         ))}
@@ -164,15 +166,15 @@ export default function EarningsPage() {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-gray-800">{data.summary.totalRides}</p>
-            <p className="text-xs text-gray-400">Total rides</p>
+            <p className="text-xs text-gray-400">{t("driver.total_rides")}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-primary">{data.summary.kinRideCount}</p>
-            <p className="text-xs text-gray-400">Kin rides</p>
+            <p className="text-xs text-gray-400">{t("driver.kin_rides")}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-800">{kinPct}%</p>
-            <p className="text-xs text-gray-400">Kin rate</p>
+            <p className="text-xs text-gray-400">{t("driver.kin_rate")}</p>
           </div>
         </div>
       </div>
@@ -180,7 +182,7 @@ export default function EarningsPage() {
       {/* Ride list */}
       {data.rides.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Recent Rides</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("driver.recent_rides")}</h2>
           <div className="space-y-2">
             {data.rides.map((ride) => (
               <div
