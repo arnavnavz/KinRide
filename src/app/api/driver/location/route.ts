@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const STALE_MS = 60 * 60 * 1000; // 1 hour
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -32,11 +34,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await prisma.driverProfile.updateMany({
-      where: { userId: session.user.id },
-      data: { lastKnownLat: lat, lastKnownLng: lng },
-    });
-
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("POST /api/driver/location error:", err);
@@ -62,6 +59,11 @@ export async function GET(req: NextRequest) {
 
     if (!location) {
       return NextResponse.json({ error: "No location found" }, { status: 404 });
+    }
+
+    // Discard stale locations older than 1 hour
+    if (Date.now() - location.updatedAt.getTime() > STALE_MS) {
+      return NextResponse.json({ error: "Location is stale" }, { status: 404 });
     }
 
     return NextResponse.json({
