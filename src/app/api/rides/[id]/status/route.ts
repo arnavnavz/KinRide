@@ -6,6 +6,7 @@ import { rideStatusSchema } from "@/lib/validations";
 import { RideStatus } from "@prisma/client";
 import { computeCommission, computeLoyaltyCredits, getCurrentWeek } from "@/lib/pricing";
 import { chargeRide } from "@/lib/charge-ride";
+import { notifyRideEvent } from "@/lib/push";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   REQUESTED: ["CANCELED"],
@@ -138,6 +139,25 @@ export async function POST(
       if (!chargeResult.success && chargeResult.error) {
         paymentError = chargeResult.error;
       }
+    }
+
+    // Send push notifications (fire-and-forget)
+    const driverName = updated.driver?.name;
+    const statusToEvent: Record<string, { event: string; targetUserId: string }> = {
+      ARRIVING: { event: "ride_arriving", targetUserId: ride.riderId },
+      IN_PROGRESS: { event: "ride_started", targetUserId: ride.riderId },
+      COMPLETED: { event: "ride_completed", targetUserId: ride.riderId },
+      CANCELED: {
+        event: "ride_canceled",
+        targetUserId: isDriver ? ride.riderId : (ride.driverId ?? ""),
+      },
+    };
+    const pushInfo = statusToEvent[newStatus];
+    if (pushInfo && pushInfo.targetUserId) {
+      notifyRideEvent(pushInfo.targetUserId, pushInfo.event, id, {
+        driverName: driverName ?? "",
+        fare: ride.estimatedFare?.toFixed(2) ?? "",
+      }).catch(() => {});
     }
 
     return NextResponse.json({

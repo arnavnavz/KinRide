@@ -70,6 +70,7 @@ model User {
   tipsReceived        Tip[]                 @relation("TipReceiver")
   wallet              Wallet?
   supportTickets      SupportTicket[]       @relation("UserTickets")
+  pushSubscriptions   PushSubscription[]    @relation("UserPushSubs")
 }
 
 model DriverProfile {
@@ -348,6 +349,30 @@ model WalletTransaction {
   createdAt   DateTime @default(now())
 
   @@index([walletId, createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserPushSubs", fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model DriverLocation {
+  id        String   @id @default(cuid())
+  driverId  String   @unique
+  lat       Float
+  lng       Float
+  heading   Float?
+  speed     Float?
+  updatedAt DateTime @updatedAt
+
+  @@index([driverId])
 }
 
 model SupportTicket {

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { notifyRideEvent } from "./push";
 
 export async function createOffersForRide(rideRequestId: string) {
   const ride = await prisma.rideRequest.findUnique({
@@ -25,6 +26,8 @@ export async function createOffersForRide(rideRequestId: string) {
         where: { id: ride.id },
         data: { status: "OFFERED" },
       });
+      // Notify specific driver
+      notifyRideEvent(driver.id, "new_ride_offer", ride.id, { pickup: ride.pickupAddress }).catch(() => {});
     }
     return;
   }
@@ -64,6 +67,12 @@ export async function createOffersForRide(rideRequestId: string) {
   }));
 
   await prisma.rideOffer.createMany({ data: offers });
+
+  // Notify matched drivers
+  for (const driverId of targetDriverIds) {
+    notifyRideEvent(driverId, "new_ride_offer", ride.id, { pickup: ride.pickupAddress }).catch(() => {});
+  }
+
   await prisma.rideRequest.update({
     where: { id: ride.id },
     data: { status: "OFFERED" },

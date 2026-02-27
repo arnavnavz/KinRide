@@ -61,6 +61,7 @@ export default function DriverRidePage() {
   const [sharingLocation, setSharingLocation] = useState(true);
   const [driverLocation, setDriverLocation] = useState<LatLng | null>(null);
   const lastEmitRef = useRef(0);
+  const lastPersistRef = useRef(0);
   const { joinRide, emitRideStatus, emitDriverLocation, onEvent } = useSocket();
 
   const loadRide = useCallback(async () => {
@@ -93,16 +94,27 @@ export default function DriverRidePage() {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
+        const heading = pos.coords.heading;
+        const speed = pos.coords.speed;
         setDriverLocation({ lat, lng });
 
         const now = Date.now();
-        if (now - lastEmitRef.current >= 5000) {
+        if (now - lastEmitRef.current >= 3000) {
           lastEmitRef.current = now;
-          emitDriverLocation(rideId, lat, lng);
+          emitDriverLocation(rideId, lat, lng, heading, speed);
+        }
+        // Persist to DB every 15s
+        if (now - lastPersistRef.current >= 15000) {
+          lastPersistRef.current = now;
+          fetch("/api/driver/location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lat, lng, heading, speed }),
+          }).catch(() => {});
         }
       },
       undefined,
-      { enableHighAccuracy: true, maximumAge: 3000 }
+      { enableHighAccuracy: true, maximumAge: 2000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);

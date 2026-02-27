@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -69,6 +69,39 @@ function makeStopIcon(index: number) {
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
+}
+
+
+function SmoothDriverMarker({ position, icon }: { position: LatLng; icon: L.DivIcon }) {
+  const markerRef = useRef<L.Marker | null>(null);
+  const prevPosRef = useRef(position);
+
+  useEffect(() => {
+    const marker = markerRef.current;
+    if (!marker) return;
+    const start = prevPosRef.current;
+    const end = position;
+    prevPosRef.current = position;
+
+    if (start.lat === end.lat && start.lng === end.lng) return;
+
+    let frame: number;
+    const duration = 1000;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = t * (2 - t); // ease-out
+      const lat = start.lat + (end.lat - start.lat) * ease;
+      const lng = start.lng + (end.lng - start.lng) * ease;
+      marker.setLatLng([lat, lng]);
+      if (t < 1) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [position]);
+
+  return <Marker ref={markerRef} position={[position.lat, position.lng]} icon={icon} />;
 }
 
 interface RideMapProps {
@@ -155,10 +188,7 @@ export function RideMap({ pickup, dropoff, stops = [], driverLocation, userLocat
           <Marker key={`stop-${i}`} position={[stop.lat, stop.lng]} icon={makeStopIcon(i)} />
         ))}
         {driverLocation && (
-          <Marker
-            position={[driverLocation.lat, driverLocation.lng]}
-            icon={driverIcon}
-          />
+          <SmoothDriverMarker position={driverLocation} icon={driverIcon} />
         )}
         {routeLine && (
           <Polyline

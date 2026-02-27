@@ -59,8 +59,8 @@ export function useSocket() {
   );
 
   const emitDriverLocation = useCallback(
-    (rideId: string, lat: number, lng: number) => {
-      socketRef.current?.emit("driver:location", { rideId, lat, lng });
+    (rideId: string, lat: number, lng: number, heading?: number | null, speed?: number | null) => {
+      socketRef.current?.emit("driver:location", { rideId, lat, lng, heading: heading ?? null, speed: speed ?? null });
     },
     []
   );

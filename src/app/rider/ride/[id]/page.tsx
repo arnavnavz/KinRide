@@ -159,7 +159,7 @@ export default function RiderRidePage() {
 
   useEffect(() => {
     const unsub = onEvent("driver:location", (data: unknown) => {
-      const loc = data as { lat: number; lng: number };
+      const loc = data as { lat: number; lng: number; heading?: number; speed?: number };
       setDriverCoords(loc);
       if (pickupCoords && ["ACCEPTED", "ARRIVING"].includes(ride?.status ?? "")) {
         const toRad = (d: number) => (d * Math.PI) / 180;
@@ -174,10 +174,33 @@ export default function RiderRidePage() {
     return unsub;
   }, [onEvent, pickupCoords, ride?.status]);
 
+  // Fetch last known location from API if no real-time socket data
   useEffect(() => {
     if (hasRealLocation) return;
-    const timer = setTimeout(() => {
-      if (!hasRealLocation && pickupCoords && ride) {
+    if (!ride?.driverId || !["ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(ride?.status ?? "")) return;
+
+    let cancelled = false;
+    const fetchLastKnown = async () => {
+      try {
+        const res = await fetch(`/api/driver/location?driverId=${ride.driverId}`);
+        if (res.ok && !cancelled) {
+          const loc = await res.json();
+          setDriverCoords({ lat: loc.lat, lng: loc.lng });
+          setHasRealLocation(true);
+          if (pickupCoords && ["ACCEPTED", "ARRIVING"].includes(ride.status)) {
+            const toRad = (d: number) => (d * Math.PI) / 180;
+            const dLat = toRad(pickupCoords.lat - loc.lat);
+            const dLng = toRad(pickupCoords.lng - loc.lng);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(loc.lat)) * Math.cos(toRad(pickupCoords.lat)) * Math.sin(dLng / 2) ** 2;
+            const dist = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            setEtaMinutes(Math.max(1, Math.round(dist * 1.3 * 2.5)));
+          }
+          return;
+        }
+      } catch { /* ignore */ }
+
+      // Fallback to simulation if API also fails
+      if (!cancelled && pickupCoords && ride) {
         const sim = simulateDriverLocation(pickupCoords, ride.status);
         if (sim) {
           setDriverCoords(sim);
@@ -189,8 +212,10 @@ export default function RiderRidePage() {
           setEtaMinutes(Math.max(1, Math.round(dist * 1.3 * 2.5)));
         }
       }
-    }, 5000);
-    return () => clearTimeout(timer);
+    };
+
+    const timer = setTimeout(fetchLastKnown, 3000);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [hasRealLocation, pickupCoords, ride]);
 
   useEffect(() => {

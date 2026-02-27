@@ -84,10 +84,12 @@ app.prepare().then(() => {
       }
     });
 
-    socket.on("driver:location", (data: { rideId: string; lat: number; lng: number }) => {
+    socket.on("driver:location", (data: { rideId: string; lat: number; lng: number; heading?: number; speed?: number }) => {
       socket.to(`ride:${data.rideId}`).emit("driver:location", {
         lat: data.lat,
         lng: data.lng,
+        heading: data.heading ?? null,
+        speed: data.speed ?? null,
       });
     });
 

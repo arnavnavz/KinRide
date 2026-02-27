@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyRideEvent } from "@/lib/push";
 
 export async function POST(
   _req: NextRequest,
@@ -79,6 +80,13 @@ export async function POST(
         driver: { select: { id: true, name: true, driverProfile: true } },
       },
     });
+
+    // Notify rider that driver accepted
+    if (updatedRide) {
+      notifyRideEvent(updatedRide.rider.id, 'ride_accepted', id, {
+        driverName: session.user.name || '',
+      }).catch(() => {});
+    }
 
     return NextResponse.json(updatedRide);
   } catch (err) {
