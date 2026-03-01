@@ -299,7 +299,7 @@ export default function PrintableReceiptPage() {
             {/* Footer */}
             <div className="text-center space-y-1 pt-1">
               <p className="text-sm text-gray-500 dark:text-gray-400">Thank you for riding with <span className="font-semibold text-indigo-600 dark:text-indigo-400">Kayu</span></p>
-              <p className="text-[11px] text-gray-300 dark:text-gray-600">support@kayuride.com</p>
+              <p className="text-[11px] text-gray-300 dark:text-gray-600">support@kayu.app</p>
             </div>
 
             {/* Trip ID */}

@@ -19,7 +19,7 @@ import { fetchRoute } from "@/lib/routing";
 
 const RideMap = dynamic(() => import("@/components/RideMap").then((m) => m.RideMap), {
   ssr: false,
-  loading: () => <div className="h-[300px] rounded-2xl bg-gray-100 animate-shimmer bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%]" />,
+  loading: () => <div className="h-[40vh] rounded-2xl bg-subtle animate-shimmer bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%]" />,
 });
 
 interface Ride {
@@ -393,19 +393,19 @@ export default function RiderRidePage() {
     return (
       <div className="space-y-5 animate-fade-in">
         <CardSkeleton />
-        <div className="h-[300px] rounded-2xl bg-gray-100 animate-shimmer bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%]" />
+        <div className="h-[40vh] rounded-2xl bg-subtle animate-shimmer bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%]" />
         <CardSkeleton />
       </div>
     );
   }
-  if (!ride) return <div className="text-center py-20 text-gray-500">Ride not found.</div>;
+  if (!ride) return <div className="text-center py-20 text-foreground/50">Ride not found.</div>;
 
   const isActive = ["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(ride.status);
   const showDriverOnMap = ride.driver && ["ACCEPTED", "ARRIVING"].includes(ride.status);
   const statusMsg = getStatusMessage(ride.status);
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in safe-top">
       {/* Cancel reason modal */}
       {showCancelModal && (
         <div
@@ -444,7 +444,7 @@ export default function RiderRidePage() {
               <button
                 onClick={cancelRide}
                 disabled={!cancelReason || canceling}
-                className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-40"
+                className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-40 active:scale-[0.97]"
               >
                 {canceling ? "Canceling..." : t("ride.cancel_ride")}
               </button>
@@ -457,18 +457,18 @@ export default function RiderRidePage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">{t("ride.your_ride")}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{t("ride.your_ride")}</h1>
             <RideStatusBadge status={ride.status} />
           </div>
           {statusMsg && (
-            <p className="text-sm text-gray-500 mt-1">{statusMsg}</p>
+            <p className="text-sm text-foreground/50 mt-1">{statusMsg}</p>
           )}
         </div>
         <div className="flex gap-2">
           <div className="relative">
             <button
               onClick={() => setShowShareMenu((v) => !v)}
-              className="text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+              className="text-xs bg-subtle text-foreground/70 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
             >
               {copied ? "Link copied!" : t("common.share")}
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -483,7 +483,7 @@ export default function RiderRidePage() {
                     onClick={shareTrip}
                     className="w-full text-left px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" />
                     </svg>
@@ -493,7 +493,7 @@ export default function RiderRidePage() {
                     onClick={shareEta}
                     className="w-full text-left px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Share Live ETA
@@ -525,7 +525,7 @@ export default function RiderRidePage() {
 
       {/* Map */}
       {(pickupCoords || dropoffCoords) && (
-        <div className="h-[300px]">
+        <div className="h-[40vh]">
           <RideMap
             pickup={pickupCoords}
             dropoff={dropoffCoords}
@@ -539,24 +539,24 @@ export default function RiderRidePage() {
       {/* SOS Modal */}
       {showSOS && (
         <div className="fixed inset-0 bg-black/40 backdrop-animate flex items-center justify-center z-50" onClick={() => setShowSOS(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 text-center animate-fade-in-scale" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl p-6 max-w-sm mx-4 text-center animate-fade-in-scale" onClick={(e) => e.stopPropagation()}>
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
             <h3 className="text-lg font-semibold mb-2">Emergency SOS</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-foreground/50 mb-4">
               In a real emergency, call 911. This button would alert emergency contacts and Kayu safety team.
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSOS(false)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-subtle text-foreground/80 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 Close
               </button>
-              <button className="flex-1 bg-red-500 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+              <button className="flex-1 bg-red-500 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors active:scale-[0.97]">
                 Call 911
               </button>
             </div>
@@ -565,32 +565,32 @@ export default function RiderRidePage() {
       )}
 
       {/* Ride details card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+      <div className="bg-card card-hover rounded-2xl shadow-sm border border-card-border p-5 space-y-4">
         <div className="space-y-2">
           <div className="flex items-start gap-3">
             <div className="w-2.5 h-2.5 bg-green-400 rounded-full mt-1.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-400">Pickup</p>
+              <p className="text-xs text-foreground/40">Pickup</p>
               <p className="text-sm font-medium">{ride.pickupAddress}</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-2.5 h-2.5 bg-primary rounded-full mt-1.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-400">Dropoff</p>
+              <p className="text-xs text-foreground/40">Dropoff</p>
               <p className="text-sm font-medium">{ride.dropoffAddress}</p>
             </div>
           </div>
         </div>
 
         {ride.driver && (
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs text-gray-400 mb-2">Your Driver</p>
+          <div className="border-t border-card-border pt-4">
+            <p className="text-xs text-foreground/40 mb-2">Your Driver</p>
             <div className="flex items-center gap-3">
               <Avatar name={ride.driver.name} size="md" />
               <div className="flex-1">
                 <p className="font-medium text-sm">{ride.driver.name}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-foreground/40">
                   {ride.driver.driverProfile?.vehicleColor}{" "}
                   {ride.driver.driverProfile?.vehicleMake}{" "}
                   {ride.driver.driverProfile?.vehicleModel}{" · "}
@@ -636,7 +636,7 @@ export default function RiderRidePage() {
                   setRetryingPayment(false);
                 }
               }}
-              className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60"
+              className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60 active:scale-[0.97]"
             >
               {retryingPayment ? "Retrying…" : "Retry payment"}
             </button>
@@ -652,16 +652,16 @@ export default function RiderRidePage() {
 
       {/* Fare breakdown */}
       {ride.estimatedFare && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-card card-hover rounded-2xl shadow-sm border border-card-border p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-700">Fare</span>
+            <span className="text-sm font-semibold text-foreground/80">Fare</span>
             <span className="text-lg font-bold text-primary">${ride.estimatedFare.toFixed(2)}</span>
           </div>
           {ride.status === "COMPLETED" && ride.platformFee != null && (
-            <div className="space-y-1.5 text-xs text-gray-500">
+            <div className="space-y-1.5 text-xs text-foreground/50">
               <div className="flex justify-between">
                 <span>Driver earnings</span>
-                <span className="font-medium text-gray-700">
+                <span className="font-medium text-foreground/80">
                   ${(ride.estimatedFare - ride.platformFee).toFixed(2)}
                 </span>
               </div>
@@ -747,7 +747,7 @@ export default function RiderRidePage() {
         )}
         <button
           onClick={() => router.push("/rider/request")}
-          className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors active:scale-[0.98]"
+          className="flex-1 bg-subtle text-foreground/70 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors active:scale-[0.98]"
         >
           Back to Request
         </button>
@@ -756,9 +756,9 @@ export default function RiderRidePage() {
       {/* Rating modal */}
       {showRating && (
         <div className="fixed inset-0 bg-black/40 backdrop-animate flex items-center justify-center z-50" onClick={() => setShowRating(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 w-full animate-fade-in-scale" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl p-6 max-w-sm mx-4 w-full animate-fade-in-scale" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-1">Rate your driver</h3>
-            <p className="text-sm text-gray-500 mb-4">How was your ride with {ride.driver?.name}?</p>
+            <p className="text-sm text-foreground/50 mb-4">How was your ride with {ride.driver?.name}?</p>
 
             <div className="flex justify-center gap-2 mb-4">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -781,20 +781,20 @@ export default function RiderRidePage() {
               onChange={(e) => setRatingComment(e.target.value)}
               placeholder="Leave a comment (optional)"
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary mb-4 resize-none"
+              className="w-full border border-card-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary mb-4 resize-none"
             />
 
             <div className="flex gap-2">
               <button
                 onClick={() => setShowRating(false)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-subtle text-foreground/80 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 Skip
               </button>
               <button
                 onClick={submitRating}
                 disabled={submittingRating}
-                className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary-dark transition-colors"
+                className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary-dark transition-colors active:scale-[0.97]"
               >
                 {submittingRating ? "Submitting..." : "Submit"}
               </button>
@@ -866,7 +866,7 @@ export default function RiderRidePage() {
               <button
                 onClick={submitTip}
                 disabled={submittingTip || (!tipAmount || (tipAmount === -1 && (!customTip || parseFloat(customTip) < 1 || parseFloat(customTip) > 100)))}
-                className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-green-600 transition-colors"
+                className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-green-600 transition-colors active:scale-[0.97]"
               >
                 {submittingTip ? "Sending..." : tipAmount && tipAmount > 0 ? `Send $${tipAmount} Tip` : tipAmount === -1 && customTip ? `Send $${parseFloat(customTip).toFixed(2)} Tip` : "Send Tip"}
               </button>
@@ -934,7 +934,7 @@ export default function RiderRidePage() {
                   <button
                     onClick={generateSplitLink}
                     disabled={splitLoading}
-                    className="flex-1 bg-violet-500 text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-violet-600 transition-colors"
+                    className="flex-1 bg-violet-500 text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-violet-600 transition-colors active:scale-[0.97]"
                   >
                     {splitLoading ? "Generating..." : "Generate & Copy Link"}
                   </button>

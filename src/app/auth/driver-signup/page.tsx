@@ -48,7 +48,7 @@ function ProgressBar({ step }: { step: number }) {
           </div>
           <span
             className={`text-[10px] font-medium transition-colors duration-300 ${
-              i <= step ? "text-primary" : "text-gray-400"
+              i <= step ? "text-primary" : "text-foreground/40"
             }`}
           >
             {label}
@@ -76,14 +76,14 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      <label className="block text-sm font-medium text-foreground/80 mb-1.5">
         {label}
       </label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors ${
+        className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors ${
           error ? "border-danger bg-red-50/50" : "border-gray-300"
         }`}
         placeholder={placeholder}
@@ -263,17 +263,17 @@ export default function DriverSignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-white to-accent/5 py-10 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 py-10 px-4">
       <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-6 animate-fade-in">
           <div className="inline-flex items-center gap-1 mb-2">
             <span className="text-3xl font-bold text-primary">Ka</span>
             <span className="text-3xl font-light text-foreground">yu</span>
           </div>
-          <p className="text-gray-500 text-sm">Driver Registration</p>
+          <p className="text-foreground/50 text-sm">Driver Registration</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6">
           <ProgressBar step={step} />
 
           {apiError && (
@@ -394,7 +394,7 @@ export default function DriverSignupPage() {
                 { key: "insurance", label: "Insurance Card" },
               ].map(({ key, label }) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
                     {label}
                   </label>
                   {uploadedFiles[key] ? (
@@ -419,11 +419,11 @@ export default function DriverSignupPage() {
                     </div>
                   ) : (
                     <label className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors border-gray-300 hover:border-primary/40 hover:bg-primary/5">
-                          <svg className="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-8 h-8 text-foreground/30 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-                          <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP, or PDF (max 10MB)</p>
+                          <p className="text-sm text-foreground/50">Click to upload or drag and drop</p>
+                          <p className="text-xs text-foreground/40 mt-1">JPEG, PNG, WebP, or PDF (max 10MB)</p>
                       <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleFileSelect(e, key)} />
                     </label>
                   )}
@@ -449,7 +449,7 @@ export default function DriverSignupPage() {
                   onChange={(e) => set("acceptTerms", e.target.checked)}
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary"
                 />
-                <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
+                <span className="text-sm text-foreground/70 group-hover:text-foreground/90 transition-colors">
                   I agree to the Kayu{" "}
                   <span className="text-primary font-medium">Terms of Service</span>{" "}
                   and{" "}
@@ -519,7 +519,7 @@ export default function DriverSignupPage() {
                 {verificationUrl ? (
                   <a
                     href={verificationUrl}
-                    className="block w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors text-center"
+                    className="block w-full bg-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors text-center"
                   >
                     Verify Identity Now
                   </a>
@@ -537,14 +537,14 @@ export default function DriverSignupPage() {
                       setVerifyingId(false);
                     }}
                     disabled={verifyingId}
-                    className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50"
+                    className="w-full bg-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50"
                   >
                     {verifyingId ? "Starting verification..." : "Verify Identity Now"}
                   </button>
                 )}
                 <button
                   onClick={() => router.push("/auth/signin")}
-                  className="w-full bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                  className="w-full bg-card text-foreground/80 py-2.5 rounded-xl text-sm font-medium hover:bg-subtle transition-colors"
                 >
                   Skip for now — Sign In
                 </button>
@@ -557,7 +557,7 @@ export default function DriverSignupPage() {
               {step > 0 && (
                 <button
                   onClick={() => setStep((s) => s - 1)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  className="flex-1 border border-gray-300 text-foreground/80 py-2.5 rounded-xl text-sm font-medium hover:bg-card transition-colors"
                 >
                   Back
                 </button>
@@ -565,7 +565,7 @@ export default function DriverSignupPage() {
               <button
                 onClick={handleNext}
                 disabled={loading}
-                className="flex-1 bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50"
+                className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 active:scale-[0.97]"
               >
                 {loading
                   ? "Creating account..."
@@ -578,7 +578,7 @@ export default function DriverSignupPage() {
         </div>
 
         {step < 3 && (
-          <p className="text-center text-sm text-gray-500 mt-4 animate-fade-in">
+          <p className="text-center text-sm text-foreground/50 mt-4 animate-fade-in">
             Already have an account?{" "}
             <Link
               href="/auth/signin"

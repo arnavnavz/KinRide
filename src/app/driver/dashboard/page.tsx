@@ -69,7 +69,7 @@ function OfferTimer({ expiresAt }: { expiresAt: string }) {
 
   return (
     <span className={`text-xs font-medium tabular-nums transition-colors ${
-      isCritical ? "text-red-600 animate-pulse" : isUrgent ? "text-amber-600" : "text-gray-400"
+      isCritical ? "text-red-600 animate-pulse" : isUrgent ? "text-amber-600" : "text-foreground/40"
     }`}>
       {timeLeft}s
     </span>
@@ -239,13 +239,13 @@ export default function DriverDashboard() {
   }
 
   if (session?.user?.role !== "DRIVER") {
-    return <div className="text-center py-20 text-gray-500">This page is for drivers only.</div>;
+    return <div className="text-center py-20 text-foreground/50">This page is for drivers only.</div>;
   }
 
   const isKinPro = earnings?.plan === "KIN_PRO";
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
       <ConfirmDialog
         open={!!declineTarget}
         title="Decline Offer?"
@@ -257,18 +257,18 @@ export default function DriverDashboard() {
       />
 
       {/* Profile & Online Toggle */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <div className="bg-card rounded-2xl shadow-sm border border-card-border p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Avatar name={session?.user?.name || "D"} size="md" online={profile?.isOnline} />
             <div>
-              <h1 className="text-xl font-bold">{t("driver.dashboard")}</h1>
+              <h1 className="text-xl font-bold tracking-tight">{t("driver.dashboard")}</h1>
               {profile && (
                 <div className="mt-0.5 flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-foreground/50">
                     {profile.vehicleColor} {profile.vehicleMake} {profile.vehicleModel}
                   </span>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">
+                  <span className="text-xs bg-subtle text-foreground/70 px-2 py-0.5 rounded font-mono">
                     {profile.kinCode}
                   </span>
                   {profile.isVerified && (
@@ -292,7 +292,7 @@ export default function DriverDashboard() {
             className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 active:scale-[0.97] ${
               profile?.isOnline
                 ? "bg-green-500 text-white hover:bg-green-600 shadow-sm shadow-green-200"
-                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                : "bg-gray-200 text-foreground/70 hover:bg-gray-300"
             }`}
           >
             {toggling ? (
@@ -305,8 +305,8 @@ export default function DriverDashboard() {
 
       {/* Verification Status */}
       {verificationStatus && !verificationStatus.overallApproved && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 animate-fade-in">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Account Verification</h2>
+        <div className="bg-card rounded-2xl shadow-sm border border-card-border p-5 animate-fade-in">
+          <h2 className="text-sm font-semibold text-foreground/80 mb-4">Account Verification</h2>
 
           {verificationStatus.revoked && verificationStatus.revocationReason && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
@@ -324,7 +324,7 @@ export default function DriverDashboard() {
 
           <div className="space-y-3">
             {/* ID Verification */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+            <div className="flex items-center justify-between p-3 bg-subtle rounded-xl">
               <div className="flex items-center gap-3">
                 <div className={"w-8 h-8 rounded-lg flex items-center justify-center " + (
                   verificationStatus.idVerification === "verified"
@@ -340,14 +340,14 @@ export default function DriverDashboard() {
                   ) : verificationStatus.idVerification === "pending" ? (
                     <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" />
                     </svg>
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Identity Verification</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-foreground">Identity Verification</p>
+                  <p className="text-xs text-foreground/50">
                     {verificationStatus.idVerification === "verified" ? "ID verified via Stripe" :
                      verificationStatus.idVerification === "pending" ? "Verification in progress..." :
                      verificationStatus.idVerification === "failed" ? "Verification needs attention" :
@@ -367,7 +367,7 @@ export default function DriverDashboard() {
             </div>
 
             {/* Background Check */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+            <div className="flex items-center justify-between p-3 bg-subtle rounded-xl">
               <div className="flex items-center gap-3">
                 <div className={"w-8 h-8 rounded-lg flex items-center justify-center " + (
                   verificationStatus.backgroundCheck === "clear"
@@ -389,14 +389,14 @@ export default function DriverDashboard() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   ) : (
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Background Check</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-foreground">Background Check</p>
+                  <p className="text-xs text-foreground/50">
                     {verificationStatus.backgroundCheck === "clear" ? "Background check passed" :
                      verificationStatus.backgroundCheck === "pending" ? "Check in progress (1-5 business days)" :
                      verificationStatus.backgroundCheck === "consider" ? "Flagged for review" :
@@ -420,9 +420,9 @@ export default function DriverDashboard() {
       )}
       {/* Earnings Summary */}
       {earnings && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-card rounded-2xl shadow-sm border border-card-border p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">{t("driver.earnings")}</h2>
+            <h2 className="text-sm font-semibold text-foreground/80">{t("driver.earnings")}</h2>
             <button
               onClick={() => router.push("/driver/earnings")}
               className="text-xs text-primary hover:underline"
@@ -432,19 +432,19 @@ export default function DriverDashboard() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">{t("driver.today")}</p>
-              <p className="text-xl font-bold text-gray-800">${earnings.summary.today.net.toFixed(2)}</p>
+              <p className="text-xs text-foreground/40 mb-0.5">{t("driver.today")}</p>
+              <p className="text-xl font-bold text-foreground">${earnings.summary.today.net.toFixed(2)}</p>
               {earnings.summary.today.fees > 0 && (
-                <p className="text-[10px] text-gray-400">
+                <p className="text-[10px] text-foreground/40">
                   ${earnings.summary.today.gross.toFixed(2)} ${t("driver.gross")} · ${earnings.summary.today.fees.toFixed(2)} ${t("driver.fees")}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">{t("driver.this_week")}</p>
-              <p className="text-xl font-bold text-gray-800">${earnings.summary.week.net.toFixed(2)}</p>
+              <p className="text-xs text-foreground/40 mb-0.5">{t("driver.this_week")}</p>
+              <p className="text-xl font-bold text-foreground">${earnings.summary.week.net.toFixed(2)}</p>
               {earnings.summary.week.fees > 0 && (
-                <p className="text-[10px] text-gray-400">
+                <p className="text-[10px] text-foreground/40">
                   ${earnings.summary.week.gross.toFixed(2)} ${t("driver.gross")} · ${earnings.summary.week.fees.toFixed(2)} ${t("driver.fees")}
                 </p>
               )}
@@ -452,12 +452,12 @@ export default function DriverDashboard() {
           </div>
 
           {!isKinPro && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-4 pt-4 border-t border-card-border">
               <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-700">{t("driver.upgrade_kinpro")}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{t("driver.kinpro_desc")}</p>
+                    <p className="text-sm font-semibold text-foreground/80">{t("driver.upgrade_kinpro")}</p>
+                    <p className="text-xs text-foreground/50 mt-0.5">{t("driver.kinpro_desc")}</p>
                   </div>
                   <button
                     onClick={upgradeToKinPro}
@@ -486,7 +486,7 @@ export default function DriverDashboard() {
         )}
 
         {offers.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
+          <div className="bg-card rounded-2xl border border-card-border p-8 text-center text-foreground/40 text-sm">
             {t("driver.no_offers")}
           </div>
         ) : (
@@ -498,12 +498,12 @@ export default function DriverDashboard() {
                 : isKinPro ? "10% commission" : "15% commission";
               const commissionColor = isKinRide
                 ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-500";
+                : "bg-subtle text-foreground/50";
 
               return (
                 <div
                   key={offer.id}
-                  className="bg-white rounded-xl border border-gray-100 p-4 space-y-3 animate-fade-in card-hover"
+                  className="bg-card rounded-xl border border-card-border p-4 space-y-3 animate-fade-in card-hover"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -527,18 +527,18 @@ export default function DriverDashboard() {
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-2 h-2 bg-green-400 rounded-full" />
-                      <span className="text-gray-600 truncate">{offer.rideRequest.pickupAddress}</span>
+                      <span className="text-foreground/70 truncate">{offer.rideRequest.pickupAddress}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-2 h-2 bg-primary rounded-full" />
-                      <span className="text-gray-600 truncate">{offer.rideRequest.dropoffAddress}</span>
+                      <span className="text-foreground/70 truncate">{offer.rideRequest.dropoffAddress}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {offer.rideRequest.estimatedFare && (
-                        <span className="text-sm font-semibold text-gray-700">
+                        <span className="text-sm font-semibold text-foreground/80">
                           ${offer.rideRequest.estimatedFare.toFixed(2)}
                         </span>
                       )}
@@ -548,7 +548,7 @@ export default function DriverDashboard() {
                       <button
                         onClick={() => setDeclineTarget(offer.rideRequestId)}
                         disabled={decliningId === offer.rideRequestId}
-                        className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 active:scale-[0.97]"
+                        className="px-4 py-2 text-sm text-foreground/70 bg-subtle rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 active:scale-[0.97]"
                       >
                         {decliningId === offer.rideRequestId ? "..." : t("driver.decline")}
                       </button>
@@ -577,7 +577,7 @@ export default function DriverDashboard() {
               <button
                 key={ride.id}
                 onClick={() => router.push(`/driver/ride/${ride.id}`)}
-                className="w-full text-left bg-white rounded-xl border border-gray-100 p-4 card-hover"
+                className="w-full text-left bg-card rounded-xl border border-card-border p-4 card-hover"
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -588,7 +588,7 @@ export default function DriverDashboard() {
                   </div>
                   <RideStatusBadge status={ride.status} />
                 </div>
-                <div className="text-xs text-gray-400 ml-10">
+                <div className="text-xs text-foreground/40 ml-10">
                   {t("driver.rider")}: {ride.rider.name}
                 </div>
               </button>

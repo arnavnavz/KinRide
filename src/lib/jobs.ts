@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { createOffersForRide } from "./matching";
+import { notifyRideEvent } from "./push";
 
 /**
  * Expire ride offers that have passed their expiresAt time.
@@ -143,6 +144,41 @@ export async function cleanupOldNotifications(): Promise<{ deleted: number }> {
   return { deleted: result.count };
 }
 
+/**
+ * Send push reminders for rides scheduled ~30 minutes from now.
+ */
+export async function sendScheduledRideReminders(): Promise<{ sent: number }> {
+  const now = new Date();
+  const thirtyMinFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+  const twentyNineMinFromNow = new Date(now.getTime() + 29 * 60 * 1000);
+
+  const upcomingRides = await prisma.rideRequest.findMany({
+    where: {
+      status: "REQUESTED",
+      scheduledAt: {
+        gte: twentyNineMinFromNow,
+        lte: thirtyMinFromNow,
+      },
+    },
+    select: { id: true, riderId: true, pickupAddress: true, scheduledAt: true },
+  });
+
+  let sent = 0;
+  for (const ride of upcomingRides) {
+    try {
+      await notifyRideEvent(ride.riderId, "scheduled_reminder", ride.id, {
+        pickup: ride.pickupAddress,
+        scheduledAt: ride.scheduledAt?.toISOString() || "",
+      });
+      sent++;
+    } catch (err) {
+      console.error(`[jobs] Failed to send reminder for ride ${ride.id}:`, err);
+    }
+  }
+
+  return { sent };
+}
+
 export interface JobDefinition {
   name: string;
   fn: () => Promise<Record<string, number>>;
@@ -174,6 +210,11 @@ export const JOB_DEFINITIONS: JobDefinition[] = [
     name: "cleanup-notifications",
     fn: cleanupOldNotifications,
     intervalMs: 60 * 60_000, // every hour
+  },
+  {
+    name: "scheduled-reminders",
+    fn: sendScheduledRideReminders,
+    intervalMs: 60_000, // every minute
   },
 ];
 

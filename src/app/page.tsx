@@ -58,8 +58,8 @@ export default function LandingPage() {
           </div>
 
           <div className="inline-flex items-center gap-1.5 mb-6 animate-fade-in">
-            <span className="text-5xl md:text-6xl font-bold text-primary">Kin</span>
-            <span className="text-5xl md:text-6xl font-light text-foreground">Ride</span>
+            <span className="text-5xl md:text-6xl font-bold text-primary">Ka</span>
+            <span className="text-5xl md:text-6xl font-light text-foreground">yu</span>
           </div>
 
           <p className="text-xl md:text-2xl text-foreground/70 mb-3 leading-relaxed animate-fade-in">
@@ -95,7 +95,7 @@ export default function LandingPage() {
           )}
 
           {/* Stats strip */}
-          <div className="flex items-center justify-center gap-8 mt-12 animate-fade-in" data-reveal>
+          <div className="flex items-center justify-center gap-4 sm:gap-8 mt-12 animate-fade-in" data-reveal>
             {[
               { value: "10%", label: "Kin commission" },
               { value: "0%", label: "KinPro rate" },

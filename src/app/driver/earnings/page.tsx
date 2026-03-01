@@ -82,11 +82,11 @@ export default function EarningsPage() {
   }
 
   if (session?.user?.role !== "DRIVER") {
-    return <div className="text-center py-20 text-gray-500">This page is for drivers only.</div>;
+    return <div className="text-center py-20 text-foreground/50">This page is for drivers only.</div>;
   }
 
   if (!data) {
-    return <div className="text-center py-20 text-gray-500">Failed to load earnings.</div>;
+    return <div className="text-center py-20 text-foreground/50">Failed to load earnings.</div>;
   }
 
   const isKinPro = data.plan === "KIN_PRO";
@@ -95,26 +95,26 @@ export default function EarningsPage() {
     : 0;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t("driver.earnings")}</h1>
-          <p className="text-gray-500 text-sm mt-1">{t("driver.performance")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("driver.earnings")}</h1>
+          <p className="text-foreground/50 text-sm mt-1">{t("driver.performance")}</p>
         </div>
         <button
           onClick={() => router.push("/driver/dashboard")}
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors"
         >
           {t("driver.back_to_dashboard")}
         </button>
       </div>
 
       {/* Plan status */}
-      <div className={`rounded-2xl border p-5 transition-colors ${isKinPro ? "bg-primary/5 border-primary/20" : "bg-white border-gray-100"}`}>
+      <div className={`rounded-2xl border p-5 transition-colors ${isKinPro ? "bg-primary/5 border-primary/20" : "bg-card border-card-border"}`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="text-sm font-semibold text-foreground/80">
                 {isKinPro ? t("driver.kinpro_plan") : t("driver.free_plan")}
               </h2>
               {isKinPro && (
@@ -123,7 +123,7 @@ export default function EarningsPage() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-foreground/50 mt-1">
               {isKinPro
                 ? "0% commission on Kin rides · 10% on standard rides"
                 : "8% commission on Kin rides · 15% on standard rides"}
@@ -134,11 +134,16 @@ export default function EarningsPage() {
             disabled={changingPlan}
             className={`px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 active:scale-[0.97] ${
               isKinPro
-                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-subtle text-foreground/70 hover:bg-gray-200"
                 : "bg-primary text-white hover:bg-primary-dark"
             }`}
           >
-            {changingPlan ? "..." : isKinPro ? t("driver.downgrade") : t("driver.upgrade_kinpro") + " — $30/month"}
+            {changingPlan ? (
+              <svg className="w-4 h-4 animate-spin mx-auto" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : isKinPro ? t("driver.downgrade") : t("driver.upgrade_kinpro") + " — $30/month"}
           </button>
         </div>
       </div>
@@ -150,10 +155,10 @@ export default function EarningsPage() {
           { labelKey: "driver.this_week", ...data.summary.week },
           { labelKey: "driver.all_time", ...data.summary.allTime },
         ].map((period) => (
-          <div key={period.labelKey} className="bg-white rounded-2xl border border-gray-100 p-5 card-hover">
-            <p className="text-xs text-gray-400 mb-1">{t(period.labelKey)}</p>
-            <p className="text-2xl font-bold text-gray-800">${period.net.toFixed(2)}</p>
-            <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
+          <div key={period.labelKey} className="bg-card rounded-2xl border border-card-border p-5 card-hover">
+            <p className="text-xs text-foreground/40 mb-1">{t(period.labelKey)}</p>
+            <p className="text-2xl font-bold text-foreground">${period.net.toFixed(2)}</p>
+            <div className="flex items-center gap-3 mt-2 text-xs text-foreground/40">
               <span>${period.gross.toFixed(2)} {t("driver.gross")}</span>
               <span>-${period.fees.toFixed(2)} {t("driver.fees")}</span>
             </div>
@@ -162,19 +167,19 @@ export default function EarningsPage() {
       </div>
 
       {/* Stats */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="bg-card rounded-2xl border border-card-border p-5">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-2xl font-bold text-gray-800">{data.summary.totalRides}</p>
-            <p className="text-xs text-gray-400">{t("driver.total_rides")}</p>
+            <p className="text-2xl font-bold text-foreground">{data.summary.totalRides}</p>
+            <p className="text-xs text-foreground/40">{t("driver.total_rides")}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-primary">{data.summary.kinRideCount}</p>
-            <p className="text-xs text-gray-400">{t("driver.kin_rides")}</p>
+            <p className="text-xs text-foreground/40">{t("driver.kin_rides")}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-800">{kinPct}%</p>
-            <p className="text-xs text-gray-400">{t("driver.kin_rate")}</p>
+            <p className="text-2xl font-bold text-foreground">{kinPct}%</p>
+            <p className="text-xs text-foreground/40">{t("driver.kin_rate")}</p>
           </div>
         </div>
       </div>
@@ -187,12 +192,12 @@ export default function EarningsPage() {
             {data.rides.map((ride) => (
               <div
                 key={ride.id}
-                className="bg-white rounded-xl border border-gray-100 p-4 card-hover"
+                className="bg-card rounded-xl border border-card-border p-4 card-hover"
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
                     <Avatar name={ride.riderName} size="xs" />
-                    <span className="text-sm font-medium text-gray-700 truncate">
+                    <span className="text-sm font-medium text-foreground/80 truncate">
                       {ride.pickup} → {ride.dropoff}
                     </span>
                   </div>
@@ -205,7 +210,7 @@ export default function EarningsPage() {
                     <span className="text-sm font-bold text-green-600">+${ride.net.toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-400 ml-10">
+                <div className="flex items-center justify-between text-xs text-foreground/40 ml-10">
                   <span>{ride.riderName} · {new Date(ride.date).toLocaleDateString()}</span>
                   <span>
                     ${ride.gross.toFixed(2)} - ${ride.fee.toFixed(2)} fee ({ride.commissionRate}%)

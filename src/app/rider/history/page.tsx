@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Avatar } from "@/components/Avatar";
 import { RideStatusBadge } from "@/components/RideStatusBadge";
 import { CardSkeleton } from "@/components/Skeleton";
+import { StarRating } from "@/components/StarRating";
 import { useI18n } from "@/lib/i18n-context";
 
 interface RideHistoryItem {
@@ -264,10 +265,7 @@ export default function RiderHistoryPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {ride.ratings.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-xs text-amber-500">
-                        <span>&#9733;</span>
-                        {ride.ratings[0].stars}
-                      </span>
+                      <StarRating rating={ride.ratings[0].stars} size="xs" showValue={false} />
                     )}
                     {ride.estimatedFare != null && (
                       <span className="text-sm font-bold text-gray-900 dark:text-white">

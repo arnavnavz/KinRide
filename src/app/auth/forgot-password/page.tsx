@@ -37,17 +37,17 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-white to-accent/5">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5">
       <div className="w-full max-w-sm mx-auto px-6">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1 mb-2">
             <span className="text-3xl font-bold text-primary">Ka</span>
             <span className="text-3xl font-light text-foreground">yu</span>
           </div>
-          <p className="text-gray-500 text-sm">Reset your password</p>
+          <p className="text-foreground/50 text-sm">Reset your password</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6">
           {submitted ? (
             <div className="text-center space-y-4">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -56,8 +56,8 @@ export default function ForgotPasswordPage() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Check your email</h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <h2 className="text-lg font-semibold text-foreground">Check your email</h2>
+                <p className="text-sm text-foreground/50 mt-1">
                   If an account exists for <span className="font-medium">{email}</span>, we&apos;ve sent a password reset link.
                 </p>
               </div>
@@ -69,24 +69,24 @@ export default function ForgotPasswordPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="animate-fade-in space-y-4">
               {error && (
                 <div className="bg-red-50 text-red-600 text-sm px-4 py-2.5 rounded-lg">
                   {error}
                 </div>
               )}
 
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-foreground/50">
                 Enter your email address and we&apos;ll send you a link to reset your password.
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-foreground/80 mb-1.5">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   placeholder="you@kayu.com"
                   required
                 />
@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50"
+                className="w-full bg-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 active:scale-[0.97]"
               >
                 {loading ? "Sending..." : "Send Reset Link"}
               </button>
@@ -104,7 +104,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="mt-4 text-center">
-          <Link href="/auth/signin" className="text-sm text-gray-500 hover:text-primary">
+          <Link href="/auth/signin" className="text-sm text-foreground/50 hover:text-primary">
             Back to sign in
           </Link>
         </div>

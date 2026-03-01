@@ -8,11 +8,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AddressInput } from "@/components/AddressInput";
 import { Avatar } from "@/components/Avatar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { RatingModal, type PendingRide } from "@/components/RatingModal";
 import type { LatLng } from "@/lib/geocode";
 import { haptic } from "@/lib/haptic";
 import { useI18n } from "@/lib/i18n-context";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { formatSurgeLabel } from "@/lib/surge";
+function formatSurgeLabel(multiplier: number): string { return multiplier > 1 ? `${multiplier.toFixed(1)}x` : ""; }
 import { fetchRoute } from "@/lib/routing";
 
 const RideMap = dynamic(() => import("@/components/RideMap").then((m) => m.RideMap), {
@@ -111,6 +112,8 @@ export default function RequestRidePage() {
   const [promoSuccess, setPromoSuccess] = useState("");
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [riderNote, setRiderNote] = useState("");
+  const [pendingRating, setPendingRating] = useState<PendingRide | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,6 +142,18 @@ export default function RequestRidePage() {
       () => {},
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/rides/pending-rating")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.pendingRating) {
+          setPendingRating(data.pendingRating);
+          setShowRatingModal(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -441,16 +456,6 @@ export default function RequestRidePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   {t("nav.my_kin")}
-                </Link>
-                <Link
-                  href="/rider/history"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
-                >
-                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Ride History
                 </Link>
                 <Link
                   href="/rider/wallet"
@@ -1319,6 +1324,17 @@ export default function RequestRidePage() {
           )}
         </div>
       </div>
+
+      {showRatingModal && pendingRating && (
+        <RatingModal
+          ride={pendingRating}
+          onClose={() => setShowRatingModal(false)}
+          onSubmit={() => {
+            setShowRatingModal(false);
+            setPendingRating(null);
+          }}
+        />
+      )}
     </div>
   );
 }

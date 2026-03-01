@@ -118,6 +118,13 @@ export async function notifyRideEvent(
       body: extra?.preview || "You have a new message",
       url: `/rider/ride/${rideId}`,
     },
+    scheduled_reminder: {
+      title: "Upcoming ride in 30 min",
+      body: extra?.pickup
+        ? `Your ride from ${extra.pickup} is coming up`
+        : "Your scheduled ride is coming up soon",
+      url: `/rider/ride/${rideId}`,
+    },
   };
 
   const payload = messages[event];

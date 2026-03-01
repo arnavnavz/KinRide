@@ -21,7 +21,7 @@ function NavLink({ href, children, onClick }: { href: string; children: React.Re
       className={`transition-colors ${
         isActive
           ? "text-primary font-medium"
-          : "text-gray-600 hover:text-primary"
+          : "text-foreground/50 hover:text-primary"
       }`}
     >
       {children}
@@ -95,7 +95,7 @@ export function Navbar() {
   );
 
   return (
-    <nav className="bg-white/80 dark:bg-card/80 backdrop-blur-lg border-b border-gray-200/60 dark:border-card-border sticky top-0 z-50">
+    <nav className="bg-card/80 backdrop-blur-lg border-b border-card-border sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href={isDriver ? "/driver/dashboard" : "/rider/request"} className="flex items-center gap-1.5">
           <span className="text-xl font-bold text-primary">Ka</span>
@@ -105,11 +105,11 @@ export function Navbar() {
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-4 text-sm">
           {navLinks}
-          <div className="flex items-center gap-3 ml-2 pl-4 border-l border-gray-200">
+          <div className="flex items-center gap-3 ml-2 pl-4 border-l border-card-border">
             <NotificationBell />
             <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Avatar name={session.user.name || "U"} size="xs" />
-              <span className="text-gray-500 text-xs">
+              <span className="text-foreground/50 text-xs">
                 {session.user.name}
                 <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] uppercase font-medium">
                   {session.user.role}
@@ -119,7 +119,7 @@ export function Navbar() {
             <ThemeToggleButton />
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-gray-400 hover:text-danger transition-colors"
+              className="text-foreground/50 hover:text-danger transition-colors"
             >
               {t("nav.sign_out")}
             </button>
@@ -130,7 +130,7 @@ export function Navbar() {
         {/* Mobile hamburger */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-2 text-gray-600 hover:text-primary transition-colors"
+          className="md:hidden p-2 text-foreground/50 hover:text-primary transition-colors"
           aria-label="Toggle menu"
         >
           {menuOpen ? (
@@ -147,12 +147,17 @@ export function Navbar() {
 
       {/* Mobile drawer */}
       {menuOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-lg px-4 pb-4 pt-2 space-y-3 text-sm shadow-lg animate-slide-down">
+        <>
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[39] md:hidden transition-opacity duration-200"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="relative z-[40] md:hidden border-t border-card-border bg-card/95 backdrop-blur-lg px-4 pb-4 pt-2 space-y-3 text-sm shadow-lg animate-slide-down transition-transform duration-200 ease-out">
           {navLinks}
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="pt-3 border-t border-card-border flex items-center justify-between">
             <Link href="/profile" onClick={closeMenu} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Avatar name={session.user.name || "U"} size="xs" />
-              <span className="text-gray-500 text-xs">
+              <span className="text-foreground/50 text-xs">
                 {session.user.name}
                 <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] uppercase font-medium">
                   {session.user.role}
@@ -162,12 +167,13 @@ export function Navbar() {
             <ThemeToggleButton />
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-gray-400 hover:text-danger transition-colors text-xs"
+              className="text-foreground/50 hover:text-danger transition-colors text-xs"
             >
               {t("nav.sign_out")}
             </button>
           </div>
         </div>
+        </>
       )}
     </nav>
   );
