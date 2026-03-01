@@ -23,7 +23,7 @@ export async function geocodeAddress(
       const delta = 2;
       url += `&viewbox=${nearLocation.lng - delta},${nearLocation.lat + delta},${nearLocation.lng + delta},${nearLocation.lat - delta}&bounded=0`;
     }
-    const res = await fetch(url, { headers: { "User-Agent": "KinRide/1.0" } });
+    const res = await fetch(url, { headers: { "User-Agent": "Kayu/1.0" } });
     const data = await res.json();
     if (data.length > 0) {
       return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
@@ -42,7 +42,7 @@ export async function searchAddresses(
   try {
     const res = await fetch(
       `${NOMINATIM_BASE}/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
-      { headers: { "User-Agent": "KinRide/1.0" } }
+      { headers: { "User-Agent": "Kayu/1.0" } }
     );
     const data = await res.json();
     return data.map(

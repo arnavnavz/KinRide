@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import OpenAI from "openai";
 
-const SYSTEM_PROMPT = `You are KinRide's AI assistant. You help riders book rides using natural language.
+const SYSTEM_PROMPT = `You are Kayu's AI assistant. You help riders book rides using natural language.
 
 CRITICAL RULES FOR DESTINATIONS:
 - NEVER use vague destinations like "the airport", "the mall", "the station", "downtown". Always resolve them to a SPECIFIC place name with city/state.
@@ -41,6 +42,9 @@ For any other question or chat:
 Keep messages short, friendly, and casual. Never break character.`;
 
 export async function POST(req: NextRequest) {
+  const limited = checkRateLimit(req, RATE_LIMITS.aiChat);
+  if (limited) return limited;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
       try {
         const geoRes = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`,
-          { headers: { "User-Agent": "KinRide/1.0" } }
+          { headers: { "User-Agent": "Kayu/1.0" } }
         );
         const geoData = await geoRes.json();
         if (geoData.display_name) {

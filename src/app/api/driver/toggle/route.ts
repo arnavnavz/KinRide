@@ -18,6 +18,14 @@ export async function POST() {
       return NextResponse.json({ error: "No driver profile" }, { status: 404 });
     }
 
+    // Prevent going online if verification was revoked
+    if (!profile.isOnline && profile.verificationRevokedAt) {
+      return NextResponse.json(
+        { error: "Your account has been suspended. Please contact support." },
+        { status: 403 }
+      );
+    }
+
     const updated = await prisma.driverProfile.update({
       where: { userId: session.user.id },
       data: { isOnline: !profile.isOnline },

@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useI18n } from "@/lib/i18n-context";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -101,7 +101,7 @@ const SUGGESTIONS = [
   "Cheapest ride to the mall",
 ];
 
-export default function AIChatPage() {
+function AIChatPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { t } = useI18n();
@@ -141,7 +141,7 @@ export default function AIChatPage() {
       if (pickupAddress === "current_location" && userLocation) {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`,
-          { headers: { "User-Agent": "KinRide/1.0" } }
+          { headers: { "User-Agent": "Kayu/1.0" } }
         );
         const geo = await res.json();
         pickupAddress = geo.display_name?.split(",").slice(0, 3).join(",").trim() || `${userLocation.lat}, ${userLocation.lng}`;
@@ -213,6 +213,17 @@ export default function AIChatPage() {
     }
   }, [messages, loading, userLocation, pendingRide, bookRide]);
 
+  // Handle deep link query parameter (e.g. from Siri: /rider/ai?q=ride+to+mcdonalds)
+  const searchParams = useSearchParams();
+  const hasAutoSent = useRef(false);
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && !hasAutoSent.current && userLocation) {
+      hasAutoSent.current = true;
+      sendMessage(q);
+    }
+  }, [searchParams, userLocation, sendMessage]);
+
 
   // Resolve addresses when pending ride is set
   useEffect(() => {
@@ -228,7 +239,7 @@ export default function AIChatPage() {
       setPickupCoords(userLocation);
       fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`,
-        { headers: { "User-Agent": "KinRide/1.0" } }
+        { headers: { "User-Agent": "Kayu/1.0" } }
       )
         .then((r) => r.json())
         .then((data) => {
@@ -241,7 +252,7 @@ export default function AIChatPage() {
       setResolvedPickup(pendingRide.pickup);
       fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pendingRide.pickup)}&limit=1`,
-        { headers: { "User-Agent": "KinRide/1.0" } }
+        { headers: { "User-Agent": "Kayu/1.0" } }
       )
         .then((r) => r.json())
         .then((data) => {
@@ -254,7 +265,7 @@ export default function AIChatPage() {
     if (pendingRide.dropoff) {
       fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pendingRide.dropoff)}&limit=1`,
-        { headers: { "User-Agent": "KinRide/1.0" } }
+        { headers: { "User-Agent": "Kayu/1.0" } }
       )
         .then((r) => r.json())
         .then((data) => {
@@ -430,5 +441,13 @@ export default function AIChatPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AIChatPage() {
+  return (
+    <Suspense fallback={<div className='flex items-center justify-center h-screen'><div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary' /></div>}>
+      <AIChatPageInner />
+    </Suspense>
   );
 }

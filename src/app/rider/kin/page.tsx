@@ -129,7 +129,7 @@ export default function KinPage() {
       {loyalty && (
         <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl border border-primary/10 p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-700">KinRide Rewards</h2>
+            <h2 className="text-sm font-semibold text-gray-700">Kayu Rewards</h2>
             <span className="text-sm font-bold text-primary">{loyalty.credits} credits</span>
           </div>
           <div className="grid grid-cols-3 gap-3">

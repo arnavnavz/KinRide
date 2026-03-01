@@ -86,6 +86,7 @@ export default function RequestRidePage() {
   const [error, setError] = useState("");
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [showScheduledSuccess, setShowScheduledSuccess] = useState(false);
@@ -127,7 +128,7 @@ export default function RequestRidePage() {
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}`,
-            { headers: { "User-Agent": "KinRide/1.0" } }
+            { headers: { "User-Agent": "Kayu/1.0" } }
           );
           const data = await res.json();
           if (data.display_name) {
@@ -150,9 +151,9 @@ export default function RequestRidePage() {
 
   useEffect(() => {
     try {
-      const sp = localStorage.getItem("kinride-saved-places");
+      const sp = localStorage.getItem("kayu-saved-places");
       if (sp) setSavedPlaces(JSON.parse(sp));
-      const rs = localStorage.getItem("kinride-recent-searches");
+      const rs = localStorage.getItem("kayu-recent-searches");
       if (rs) setRecentSearches(JSON.parse(rs));
     } catch { /* corrupted data */ }
   }, []);
@@ -163,7 +164,7 @@ export default function RequestRidePage() {
     if (updated.length >= 8 && !savedPlaces.some((p) => p.label === label)) return;
     updated.push({ label, address: dropoff, coords: dropoffCoords });
     setSavedPlaces(updated);
-    localStorage.setItem("kinride-saved-places", JSON.stringify(updated));
+    localStorage.setItem("kayu-saved-places", JSON.stringify(updated));
     setShowSaveDropdown(false);
     setShowAddPlaceModal(false);
     setNewPlaceLabel("");
@@ -172,7 +173,7 @@ export default function RequestRidePage() {
   const removePlace = (label: string) => {
     const updated = savedPlaces.filter((p) => p.label !== label);
     setSavedPlaces(updated);
-    localStorage.setItem("kinride-saved-places", JSON.stringify(updated));
+    localStorage.setItem("kayu-saved-places", JSON.stringify(updated));
   };
 
   const applyPlace = (place: SavedPlace) => {
@@ -189,7 +190,7 @@ export default function RequestRidePage() {
     const filtered = recentSearches.filter((r) => r.address !== address);
     const updated = [{ address, coords, timestamp: Date.now() }, ...filtered].slice(0, 5);
     setRecentSearches(updated);
-    localStorage.setItem("kinride-recent-searches", JSON.stringify(updated));
+    localStorage.setItem("kayu-recent-searches", JSON.stringify(updated));
   };
 
   const fetchFareEstimate = useCallback(async () => {
@@ -442,6 +443,16 @@ export default function RequestRidePage() {
                   {t("nav.my_kin")}
                 </Link>
                 <Link
+                  href="/rider/history"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
+                >
+                  <svg className="w-4.5 h-4.5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Ride History
+                </Link>
+                <Link
                   href="/rider/wallet"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border"
@@ -481,6 +492,20 @@ export default function RequestRidePage() {
                   </svg>
                   {t("nav.profile")}
                 </Link>
+                {isNativeApp && (
+                  <button
+                    onClick={() => {
+                      (window as any).webkit?.messageHandlers?.kayuBridge?.postMessage({ type: "addToSiri" });
+                      setMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-subtle transition-colors border-t border-card-border w-full"
+                  >
+                    <svg className="w-4.5 h-4.5 text-foreground/50" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                    Add to Siri
+                  </button>
+                )}
                 <div className="px-3 py-3 border-t border-card-border">
                   <LanguageSwitcher compact />
                 </div>
@@ -490,8 +515,8 @@ export default function RequestRidePage() {
         </div>
 
         <div className="flex items-center gap-1.5 bg-card shadow-lg rounded-full px-5 py-2.5 border border-card-border">
-          <span className="text-base font-bold text-primary">Kin</span>
-          <span className="text-base font-light text-foreground">Ride</span>
+          <span className="text-base font-bold text-primary">Ka</span>
+          <span className="text-base font-light text-foreground">yu</span>
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell />

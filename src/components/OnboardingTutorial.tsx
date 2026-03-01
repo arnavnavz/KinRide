@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
-const STORAGE_KEY = "kinride-onboarding-done";
+const STORAGE_KEY = "kayu-onboarding-done";
 
 function WelcomeIcon() {
   return (
@@ -91,7 +91,7 @@ function RewardsIcon() {
 
 const steps = [
   {
-    title: "Welcome to KinRide",
+    title: "Welcome to Kayu",
     subtitle: "Your trusted ride network",
     description:
       "A smarter way to ride — built around the people you trust. Book rides, build your network, and earn rewards along the way.",

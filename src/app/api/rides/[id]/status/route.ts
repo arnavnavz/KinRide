@@ -7,6 +7,7 @@ import { RideStatus } from "@prisma/client";
 import { computeCommission, computeLoyaltyCredits, getCurrentWeek } from "@/lib/pricing";
 import { chargeRide } from "@/lib/charge-ride";
 import { notifyRideEvent } from "@/lib/push";
+import { sendRideReceipt } from "@/lib/email";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   REQUESTED: ["CANCELED"],
@@ -138,6 +139,25 @@ export async function POST(
       const chargeResult = await chargeRide(id);
       if (!chargeResult.success && chargeResult.error) {
         paymentError = chargeResult.error;
+      }
+    }
+
+    // Send ride receipt email (fire-and-forget)
+    if (newStatus === "COMPLETED" && ride.estimatedFare) {
+      const rider = await prisma.user.findUnique({ where: { id: ride.riderId }, select: { email: true } });
+      if (rider?.email) {
+        const vehicleInfo = updated.driver?.driverProfile
+          ? `${updated.driver.driverProfile.vehicleColor} ${updated.driver.driverProfile.vehicleMake} ${updated.driver.driverProfile.vehicleModel}`
+          : undefined;
+        sendRideReceipt(rider.email, {
+          pickupAddress: ride.pickupAddress,
+          dropoffAddress: ride.dropoffAddress,
+          estimatedFare: ride.estimatedFare,
+          platformFee: platformFee ?? null,
+          driverName: updated.driver?.name || "Your driver",
+          vehicleInfo,
+          date: new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+        }).catch(() => {});
       }
     }
 

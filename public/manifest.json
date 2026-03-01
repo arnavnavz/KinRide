@@ -1,6 +1,6 @@
 {
-  "name": "KinRide",
-  "short_name": "KinRide",
+  "name": "Kayu",
+  "short_name": "Kayu",
   "description": "Your trusted ride network. Request rides from drivers you trust.",
   "start_url": "/",
   "display": "standalone",

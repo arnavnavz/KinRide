@@ -91,19 +91,29 @@ export default function DriverDashboard() {
   const [declineTarget, setDeclineTarget] = useState<string | null>(null);
   const [upgradingPlan, setUpgradingPlan] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    idVerification: string;
+    backgroundCheck: string;
+    overallApproved: boolean;
+    revoked: boolean;
+    revocationReason: string | null;
+  } | null>(null);
+  const [startingVerification, setStartingVerification] = useState(false);
   const { joinUser, onEvent } = useSocket();
 
   const loadData = useCallback(async () => {
-    const [profRes, offersRes, ridesRes, earningsRes] = await Promise.all([
+    const [profRes, offersRes, ridesRes, earningsRes, verifyRes] = await Promise.all([
       fetch("/api/driver/profile"),
       fetch("/api/driver/offers"),
       fetch("/api/driver/rides"),
       fetch("/api/driver/earnings"),
+      fetch("/api/driver/verify"),
     ]);
     if (profRes.ok) setProfile(await profRes.json());
     if (offersRes.ok) setOffers(await offersRes.json());
     if (ridesRes.ok) setActiveRides(await ridesRes.json());
     if (earningsRes.ok) setEarnings(await earningsRes.json());
+    if (verifyRes.ok) setVerificationStatus(await verifyRes.json());
     setDataLoaded(true);
   }, []);
 
@@ -204,6 +214,26 @@ export default function DriverDashboard() {
     }
   };
 
+  const startVerification = async () => {
+    setStartingVerification(true);
+    try {
+      const res = await fetch("/api/driver/verify", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        const data = await res.json();
+        toast(data.error || "Failed to start verification", "error");
+      }
+    } catch {
+      toast("Failed to start verification", "error");
+    } finally {
+      setStartingVerification(false);
+    }
+  };
+
   if (status === "loading" || !dataLoaded) {
     return <DashboardSkeleton />;
   }
@@ -272,6 +302,122 @@ export default function DriverDashboard() {
         </div>
       </div>
 
+
+      {/* Verification Status */}
+      {verificationStatus && !verificationStatus.overallApproved && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 animate-fade-in">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Account Verification</h2>
+
+          {verificationStatus.revoked && verificationStatus.revocationReason && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-red-700">Verification Revoked</p>
+                  <p className="text-xs text-red-600 mt-0.5">{verificationStatus.revocationReason}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {/* ID Verification */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className={"w-8 h-8 rounded-lg flex items-center justify-center " + (
+                  verificationStatus.idVerification === "verified"
+                    ? "bg-green-100"
+                    : verificationStatus.idVerification === "pending"
+                      ? "bg-amber-100"
+                      : "bg-gray-200"
+                )}>
+                  {verificationStatus.idVerification === "verified" ? (
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : verificationStatus.idVerification === "pending" ? (
+                    <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Identity Verification</p>
+                  <p className="text-xs text-gray-500">
+                    {verificationStatus.idVerification === "verified" ? "ID verified via Stripe" :
+                     verificationStatus.idVerification === "pending" ? "Verification in progress..." :
+                     verificationStatus.idVerification === "failed" ? "Verification needs attention" :
+                     "Verify your driver\u2019s license"}
+                  </p>
+                </div>
+              </div>
+              {(verificationStatus.idVerification === "not_started" || verificationStatus.idVerification === "failed") && (
+                <button
+                  onClick={startVerification}
+                  disabled={startingVerification}
+                  className="bg-primary text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {startingVerification ? "Starting..." : "Verify Now"}
+                </button>
+              )}
+            </div>
+
+            {/* Background Check */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className={"w-8 h-8 rounded-lg flex items-center justify-center " + (
+                  verificationStatus.backgroundCheck === "clear"
+                    ? "bg-green-100"
+                    : verificationStatus.backgroundCheck === "pending"
+                      ? "bg-amber-100"
+                      : verificationStatus.backgroundCheck === "consider" || verificationStatus.backgroundCheck === "suspended"
+                        ? "bg-red-100"
+                        : "bg-gray-200"
+                )}>
+                  {verificationStatus.backgroundCheck === "clear" ? (
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  ) : verificationStatus.backgroundCheck === "pending" ? (
+                    <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  ) : verificationStatus.backgroundCheck === "consider" || verificationStatus.backgroundCheck === "suspended" ? (
+                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Background Check</p>
+                  <p className="text-xs text-gray-500">
+                    {verificationStatus.backgroundCheck === "clear" ? "Background check passed" :
+                     verificationStatus.backgroundCheck === "pending" ? "Check in progress (1-5 business days)" :
+                     verificationStatus.backgroundCheck === "consider" ? "Flagged for review" :
+                     verificationStatus.backgroundCheck === "suspended" ? "Check did not pass" :
+                     "Starts automatically after ID verification"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {verificationStatus.idVerification === "verified" && verificationStatus.backgroundCheck !== "clear" && !verificationStatus.revoked && (
+            <p className="text-xs text-green-600 mt-3 flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              You can start accepting rides while your background check completes
+            </p>
+          )}
+        </div>
+      )}
       {/* Earnings Summary */}
       {earnings && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">

@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeToggle";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { OnboardingTutorial } from "@/components/OnboardingTutorial";
 import { I18nProvider } from "@/lib/i18n-context";
+import { CookieConsent } from "@/components/CookieConsent";
 import { ReactNode } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
             {children}
           <NotificationPrompt />
           <OnboardingTutorial />
+          <CookieConsent />
           </ToastProvider>
         </ThemeProvider>
       </I18nProvider>

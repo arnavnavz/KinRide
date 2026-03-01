@@ -45,6 +45,10 @@ model User {
   defaultPaymentMethodId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  emailVerified  Boolean  @default(false)
+  verifyToken    String?  @unique
+  resetToken     String?  @unique
+  resetTokenExp  DateTime?
 
   driverProfile       DriverProfile?
   driverSubscription  DriverSubscription?
@@ -71,25 +75,43 @@ model User {
   wallet              Wallet?
   supportTickets      SupportTicket[]       @relation("UserTickets")
   pushSubscriptions   PushSubscription[]    @relation("UserPushSubs")
+  driverDocuments     DriverDocument[]      @relation("DriverDocuments")
+  refundsIssued       Refund[]              @relation("RefundsIssued")
 }
 
 model DriverProfile {
-  id                    String  @id @default(cuid())
-  userId                String  @unique
-  user                  User    @relation(fields: [userId], references: [id])
-  vehicleMake           String
-  vehicleModel          String
-  vehicleYear           Int
-  vehicleColor          String
-  licensePlate          String
-  isVerified            Boolean @default(false)
-  isOnline              Boolean @default(false)
-  kinCode               String  @unique
+  id                     String  @id @default(cuid())
+  userId                 String  @unique
+  user                   User    @relation(fields: [userId], references: [id])
+  vehicleMake            String
+  vehicleModel           String
+  vehicleYear            Int
+  vehicleColor           String
+  licensePlate           String
+  isVerified             Boolean @default(false)
+  isOnline               Boolean @default(false)
+  kinCode                String  @unique
   stripeConnectAccountId String?
-  lastKnownLat          Float?
-  lastKnownLng          Float?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  lastKnownLat           Float?
+  lastKnownLng           Float?
+
+  // Stripe Identity verification
+  stripeVerificationId   String?  @unique
+  stripeVerificationStatus String? // "pending", "verified", "requires_input"
+  idVerifiedAt           DateTime?
+
+  // Checkr background check
+  checkrCandidateId      String?  @unique
+  checkrReportId         String?
+  checkrStatus           String?  // "pending", "clear", "consider", "suspended"
+  backgroundCheckAt      DateTime?
+
+  // Tracks reason if verification is revoked
+  verificationRevokedAt  DateTime?
+  revocationReason       String?
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@index([isOnline, isVerified])
 }
@@ -165,6 +187,7 @@ model RideRequest {
   ratings  Rating[]
   tips     Tip[]
   payment  RidePayment?
+  refunds  Refund[]
 
   @@index([riderId, status])
   @@index([driverId, status])
@@ -375,6 +398,21 @@ model DriverLocation {
   @@index([driverId])
 }
 
+model DriverDocument {
+  id         String   @id @default(cuid())
+  driverId   String
+  user       User     @relation("DriverDocuments", fields: [driverId], references: [id])
+  type       String
+  filename   String
+  url        String
+  status     String   @default("pending")
+  reviewNote String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([driverId, type])
+}
+
 model SupportTicket {
   id            String   @id @default(cuid())
   userId        String
@@ -388,4 +426,19 @@ model SupportTicket {
   updatedAt     DateTime @updatedAt
 
   @@index([userId, status])
+}
+
+model Refund {
+  id                    String   @id @default(cuid())
+  rideRequestId         String
+  rideRequest           RideRequest @relation(fields: [rideRequestId], references: [id])
+  amount                Float
+  reason                String
+  stripeRefundId        String?
+  status                String   @default("pending") // pending, completed, failed
+  issuedById            String
+  issuedBy              User     @relation("RefundsIssued", fields: [issuedById], references: [id])
+  createdAt             DateTime @default(now())
+
+  @@index([rideRequestId])
 }

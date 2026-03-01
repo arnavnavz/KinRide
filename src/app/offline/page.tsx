@@ -11,7 +11,7 @@ export default function OfflinePage() {
         </div>
         <h1 className="text-xl font-bold mb-2">You&apos;re offline</h1>
         <p className="text-gray-500 text-sm mb-6">
-          KinRide needs an internet connection to request rides and message drivers.
+          Kayu needs an internet connection to request rides and message drivers.
         </p>
         <button
           onClick={() => window.location.reload()}

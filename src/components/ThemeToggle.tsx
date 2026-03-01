@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("kinride-theme") as Theme | null;
+    const saved = localStorage.getItem("kayu-theme") as Theme | null;
     const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const initial = saved || preferred;
     setTheme(initial);
@@ -31,7 +31,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(() => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
-      localStorage.setItem("kinride-theme", next);
+      localStorage.setItem("kayu-theme", next);
       document.documentElement.classList.toggle("dark", next === "dark");
       return next;
     });

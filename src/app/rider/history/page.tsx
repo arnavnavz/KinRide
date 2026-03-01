@@ -1,178 +1,306 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { RideStatusBadge } from "@/components/RideStatusBadge";
+import { useState, useEffect, useCallback } from "react";
 import { Avatar } from "@/components/Avatar";
-import { PageSkeleton } from "@/components/Skeleton";
+import { RideStatusBadge } from "@/components/RideStatusBadge";
+import { CardSkeleton } from "@/components/Skeleton";
+import { useI18n } from "@/lib/i18n-context";
 
-interface Ride {
+interface RideHistoryItem {
   id: string;
   pickupAddress: string;
   dropoffAddress: string;
   status: string;
+  estimatedFare: number | null;
+  platformFee: number | null;
+  isKinRide: boolean;
+  rideType: string;
   createdAt: string;
-  estimatedFare?: number | null;
-  driver?: { name: string } | null;
+  driver: {
+    id: string;
+    name: string;
+    driverProfile: {
+      vehicleMake: string;
+      vehicleModel: string;
+      vehicleColor: string;
+      licensePlate: string;
+    } | null;
+  } | null;
+  payment: {
+    amountTotal: number;
+    status: string;
+  } | null;
+  ratings: { stars: number; comment: string | null }[];
+  tips: { amount: number }[];
 }
 
-type Filter = "all" | "COMPLETED" | "CANCELED";
-
-const FILTERS: { label: string; value: Filter }[] = [
-  { label: "All", value: "all" },
+const STATUS_TABS = [
+  { label: "All", value: "" },
   { label: "Completed", value: "COMPLETED" },
   { label: "Canceled", value: "CANCELED" },
+  { label: "Active", value: "active" },
 ];
 
-export default function RideHistoryPage() {
-  const { data: session, status } = useSession();
+export default function RiderHistoryPage() {
+  const { data: session, status: authStatus } = useSession();
   const router = useRouter();
-  const [rides, setRides] = useState<Ride[]>([]);
+  const { t } = useI18n();
+
+  const [rides, setRides] = useState<RideHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/auth/signin");
-  }, [status, router]);
+    if (authStatus === "unauthenticated") router.push("/auth/signin");
+  }, [authStatus, router]);
+
+  const loadRides = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: page.toString(), limit: "15" });
+      if (filter === "active") {
+        // For active filter we don't send a single status, we'll filter client-side
+      } else if (filter) {
+        params.set("status", filter);
+      }
+      const res = await fetch(`/api/rides/history?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        let filtered = data.rides;
+        if (filter === "active") {
+          filtered = filtered.filter((r: RideHistoryItem) =>
+            ["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(r.status)
+          );
+        }
+        setRides(filtered);
+        setTotalPages(data.pagination.totalPages);
+        setTotal(data.pagination.total);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [page, filter]);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
-    fetch("/api/rides/request")
-      .then((r) => r.json())
-      .then((data) => setRides(Array.isArray(data) ? data : []))
-      .catch(() => setRides([]))
-      .finally(() => setLoading(false));
-  }, [status]);
+    if (authStatus === "authenticated") loadRides();
+  }, [authStatus, loadRides]);
 
-  if (status === "loading" || loading) {
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    } else if (days === 1) {
+      return "Yesterday";
+    } else if (days < 7) {
+      return d.toLocaleDateString(undefined, { weekday: "long" });
+    }
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const rideTypeLabel = (type: string) => {
+    switch (type) {
+      case "xl": return "XL";
+      case "premium": return "Premium";
+      case "pool": return "Pool";
+      default: return "Regular";
+    }
+  };
+
+  const totalSpent = rides
+    .filter((r) => r.status === "COMPLETED" && r.estimatedFare)
+    .reduce((sum, r) => sum + (r.estimatedFare || 0), 0);
+
+  if (authStatus === "loading") {
     return (
-      <div className="min-h-screen bg-background px-4 py-8 max-w-2xl mx-auto">
-        <PageSkeleton />
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
       </div>
     );
   }
 
-  const filtered = filter === "all" ? rides : rides.filter((r) => r.status === filter);
-
   return (
-    <div className="min-h-screen bg-background animate-fade-in">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-24 space-y-5 animate-fade-in">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => router.back()}
-            className="p-1.5 text-foreground/50 hover:text-foreground transition-colors"
+        <div className="flex items-center gap-3">
+          <Link
+            href="/rider/request"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-          </button>
-          <h1 className="text-xl font-bold text-foreground">Ride History</h1>
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Ride History</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {total} {total === 1 ? "ride" : "rides"} total
+            </p>
+          </div>
         </div>
 
+        {/* Stats */}
+        {rides.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-3 text-center">
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{total}</p>
+              <p className="text-xs text-gray-500">Total Rides</p>
+            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-3 text-center">
+              <p className="text-lg font-bold text-primary">${totalSpent.toFixed(2)}</p>
+              <p className="text-xs text-gray-500">Total Spent</p>
+            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-3 text-center">
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {rides.filter((r) => r.isKinRide).length}
+              </p>
+              <p className="text-xs text-gray-500">Kin Rides</p>
+            </div>
+          </div>
+        )}
+
         {/* Filter tabs */}
-        <div className="flex gap-2 mb-6">
-          {FILTERS.map((f) => (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {STATUS_TABS.map((tab) => (
             <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                filter === f.value
+              key={tab.value}
+              onClick={() => setFilter(tab.value)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                filter === tab.value
                   ? "bg-primary text-white shadow-sm"
-                  : "bg-card text-foreground/60 border border-card-border hover:border-primary/30"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:border-primary/30"
               }`}
             >
-              {f.label}
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Ride list */}
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-foreground/40">
-            <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-sm font-medium">No rides found</p>
-            <p className="text-xs mt-1 text-foreground/30">
-              {filter === "all"
-                ? "You haven't taken any rides yet"
-                : `No ${filter.toLowerCase()} rides`}
+        {loading ? (
+          <div className="space-y-3">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        ) : rides.length === 0 ? (
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p className="text-base font-medium text-gray-900 dark:text-white">No rides found</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {filter ? "Try a different filter" : "Your ride history will appear here"}
             </p>
+            <Link
+              href="/rider/request"
+              className="inline-block mt-4 bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              Book a Ride
+            </Link>
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((ride) => (
+            {rides.map((ride) => (
               <Link
                 key={ride.id}
                 href={`/rider/ride/${ride.id}`}
-                className="block bg-card border border-card-border rounded-xl p-4 hover:border-primary/30 transition-all active:scale-[0.99]"
+                className="block bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 hover:border-primary/30 transition-all active:scale-[0.99]"
               >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <RideStatusBadge status={ride.status} />
+                    {ride.isKinRide && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                        Kin
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-400">{rideTypeLabel(ride.rideType)}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{formatDate(ride.createdAt)}</span>
+                </div>
+
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-1.5 shrink-0" />
+                    <p className="text-sm text-gray-900 dark:text-white truncate">{ride.pickupAddress}</p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />
+                    <p className="text-sm text-gray-900 dark:text-white truncate">{ride.dropoffAddress}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-2">
                     {ride.driver ? (
-                      <Avatar name={ride.driver.name} size="sm" />
+                      <>
+                        <Avatar name={ride.driver.name} size="xs" />
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{ride.driver.name}</span>
+                      </>
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-foreground/10 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4 text-foreground/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
+                      <span className="text-xs text-gray-400">No driver assigned</span>
                     )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {ride.driver?.name ?? "No driver assigned"}
-                      </p>
-                      <p className="text-xs text-foreground/50">
-                        {new Date(ride.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
                   </div>
-                  <RideStatusBadge status={ride.status} />
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-foreground/60">
-                  <span className="w-2 h-2 bg-green-400 rounded-full shrink-0" />
-                  <span className="truncate">{ride.pickupAddress}</span>
-                  <svg className="w-3 h-3 shrink-0 text-foreground/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="w-2 h-2 bg-primary rounded-full shrink-0" />
-                  <span className="truncate">{ride.dropoffAddress}</span>
-                </div>
-
-                {ride.estimatedFare != null && (
-                  <div className="mt-2 flex items-center justify-end gap-2">
-                    {ride.status === "COMPLETED" && (
-                      <Link
-                        href={`/rider/ride/${ride.id}/receipt`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[11px] text-primary/70 hover:text-primary font-medium transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Receipt
-                      </Link>
+                  <div className="flex items-center gap-2">
+                    {ride.ratings.length > 0 && (
+                      <span className="flex items-center gap-0.5 text-xs text-amber-500">
+                        <span>&#9733;</span>
+                        {ride.ratings[0].stars}
+                      </span>
                     )}
-                    <span className="text-sm font-semibold text-foreground">
-                      ${ride.estimatedFare.toFixed(2)}
-                    </span>
+                    {ride.estimatedFare != null && (
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        ${ride.estimatedFare.toFixed(2)}
+                      </span>
+                    )}
                   </div>
-                )}
+                </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

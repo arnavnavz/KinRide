@@ -64,7 +64,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("kinride-email-prefs");
+      const saved = localStorage.getItem("kayu-email-prefs");
       if (saved) setEmailPrefs(JSON.parse(saved));
     } catch {}
   }, []);
@@ -72,7 +72,7 @@ export default function ProfilePage() {
   const updateEmailPref = (key: keyof typeof emailPrefs, value: boolean) => {
     const updated = { ...emailPrefs, [key]: value };
     setEmailPrefs(updated);
-    localStorage.setItem("kinride-email-prefs", JSON.stringify(updated));
+    localStorage.setItem("kayu-email-prefs", JSON.stringify(updated));
   };
 
   useEffect(() => {

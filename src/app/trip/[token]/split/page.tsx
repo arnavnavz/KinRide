@@ -48,7 +48,7 @@ function SplitContent() {
               </svg>
             </div>
             <h1 className="text-xl font-bold text-foreground">
-              You&apos;ve been invited to split a KinRide fare
+              You&apos;ve been invited to split a Kayu fare
             </h1>
             <p className="text-sm text-foreground/50">
               Someone is sharing the cost of their ride with you
@@ -80,13 +80,13 @@ function SplitContent() {
           </button>
 
           <p className="text-center text-xs text-foreground/30">
-            Secure payment powered by KinRide
+            Secure payment powered by Kayu
           </p>
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-foreground/30">
-          KinRide — Rides built on trust
+          Kayu — Rides built on trust
         </p>
       </div>
     </div>

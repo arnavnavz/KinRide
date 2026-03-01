@@ -183,7 +183,7 @@ export default function LandingPage() {
             data-reveal
             className="opacity-0 translate-y-4 mt-16 bg-gradient-to-r from-primary/10 to-accent/10 rounded-2xl border border-primary/20 p-8 text-center"
           >
-            <h2 className="text-lg font-bold mb-2 text-foreground">Drive with KinRide</h2>
+            <h2 className="text-lg font-bold mb-2 text-foreground">Drive with Kayu</h2>
             <p className="text-sm text-foreground/60 mb-4 max-w-md mx-auto">
               Keep up to 100% of your fares with KinPro. Build loyal riders who request you directly. No surge-chasing — just steady, trusted income.
             </p>
@@ -203,10 +203,15 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-card-border py-6 px-6 text-center text-xs text-foreground/40">
         <div className="flex items-center justify-center gap-1.5 mb-2">
-          <span className="font-bold text-primary">Kin</span>
-          <span className="font-light text-foreground">Ride</span>
+          <span className="font-bold text-primary">Ka</span>
+          <span className="font-light text-foreground">yu</span>
         </div>
-        Your trusted ride network
+        <p className="mb-3">Your trusted ride network</p>
+        <div className="flex items-center justify-center gap-4">
+          <a href="/legal/terms" className="hover:text-foreground/70 transition-colors">Terms</a>
+          <a href="/legal/privacy" className="hover:text-foreground/70 transition-colors">Privacy</a>
+          <a href="/legal/driver-agreement" className="hover:text-foreground/70 transition-colors">Driver Agreement</a>
+        </div>
       </footer>
     </div>
   );

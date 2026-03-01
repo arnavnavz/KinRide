@@ -114,7 +114,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "Kin rate",
     "driver.verified": "Verified",
     "driver.online": "Online",
-    "ai.title": "KinRide AI",
+    "ai.title": "Kayu AI",
     "ai.subtitle": "Tell me where you want to go",
     "ai.placeholder": "Where do you want to go?",
     "ai.ready_to_book": "Ready to book",
@@ -264,7 +264,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "Tasa Kin",
     "driver.verified": "Verificado",
     "driver.online": "En línea",
-    "ai.title": "KinRide IA",
+    "ai.title": "Kayu IA",
     "ai.subtitle": "Dime a dónde quieres ir",
     "ai.placeholder": "¿A dónde quieres ir?",
     "ai.ready_to_book": "Listo para reservar",
@@ -414,7 +414,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "Taux Kin",
     "driver.verified": "Vérifié",
     "driver.online": "En ligne",
-    "ai.title": "KinRide IA",
+    "ai.title": "Kayu IA",
     "ai.subtitle": "Dites-moi où vous voulez aller",
     "ai.placeholder": "Où voulez-vous aller ?",
     "ai.ready_to_book": "Prêt à réserver",
@@ -564,7 +564,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "किन दर",
     "driver.verified": "सत्यापित",
     "driver.online": "ऑनलाइन",
-    "ai.title": "KinRide AI",
+    "ai.title": "Kayu AI",
     "ai.subtitle": "बताइए कहाँ जाना है",
     "ai.placeholder": "कहाँ जाना चाहते हैं?",
     "ai.ready_to_book": "बुक करने को तैयार",
@@ -714,7 +714,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "Kin比例",
     "driver.verified": "已认证",
     "driver.online": "在线",
-    "ai.title": "KinRide AI",
+    "ai.title": "Kayu AI",
     "ai.subtitle": "告诉我你要去哪里",
     "ai.placeholder": "你要去哪里？",
     "ai.ready_to_book": "准备叫车",
@@ -864,7 +864,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "نسبة Kin",
     "driver.verified": "موثق",
     "driver.online": "متصل",
-    "ai.title": "KinRide AI",
+    "ai.title": "Kayu AI",
     "ai.subtitle": "أخبرني إلى أين تريد الذهاب",
     "ai.placeholder": "إلى أين تريد الذهاب؟",
     "ai.ready_to_book": "جاهز للحجز",
@@ -1014,7 +1014,7 @@ const translations: Record<string, Record<string, string>> = {
     "driver.kin_rate": "Taxa Kin",
     "driver.verified": "Verificado",
     "driver.online": "Online",
-    "ai.title": "KinRide IA",
+    "ai.title": "Kayu IA",
     "ai.subtitle": "Me diga para onde quer ir",
     "ai.placeholder": "Para onde quer ir?",
     "ai.ready_to_book": "Pronto para reservar",
@@ -1069,11 +1069,11 @@ export function t(key: string): string {
 
 export function getLocale(): Locale {
   if (typeof window === "undefined") return "en";
-  return (localStorage.getItem("kinride-locale") as Locale) || "en";
+  return (localStorage.getItem("kayu-locale") as Locale) || "en";
 }
 
 export function setLocale(locale: Locale): void {
-  localStorage.setItem("kinride-locale", locale);
+  localStorage.setItem("kayu-locale", locale);
   document.documentElement.lang = locale;
   document.documentElement.dir = isRTL(locale) ? "rtl" : "ltr";
 }

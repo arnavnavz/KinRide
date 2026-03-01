@@ -136,7 +136,7 @@ export default function RiderRidePage() {
         showLocalNotification("Driver is arriving!", { body: "Your driver is almost at the pickup location." });
       }
       if (statusData?.status === "COMPLETED") {
-        showLocalNotification("Ride completed!", { body: "Thanks for riding with KinRide." });
+        showLocalNotification("Ride completed!", { body: "Thanks for riding with Kayu." });
       }
     });
     const unsub2 = onEvent("ride:accepted", () => loadRide());
@@ -547,7 +547,7 @@ export default function RiderRidePage() {
             </div>
             <h3 className="text-lg font-semibold mb-2">Emergency SOS</h3>
             <p className="text-sm text-gray-500 mb-4">
-              In a real emergency, call 911. This button would alert emergency contacts and KinRide safety team.
+              In a real emergency, call 911. This button would alert emergency contacts and Kayu safety team.
             </p>
             <div className="flex gap-2">
               <button

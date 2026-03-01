@@ -8,7 +8,7 @@ export function NotificationPrompt() {
   const [enabling, setEnabling] = useState(false);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem("kinride-notif-dismissed");
+    const dismissed = localStorage.getItem("kayu-notif-dismissed");
     const perm = getNotificationPermission();
     if (!dismissed && perm === "default") {
       const timer = setTimeout(() => setShow(true), 5000);
@@ -23,13 +23,13 @@ export function NotificationPrompt() {
       await subscribeToPush();
     }
     setShow(false);
-    localStorage.setItem("kinride-notif-dismissed", "true");
+    localStorage.setItem("kayu-notif-dismissed", "true");
     setEnabling(false);
   };
 
   const handleDismiss = () => {
     setShow(false);
-    localStorage.setItem("kinride-notif-dismissed", "true");
+    localStorage.setItem("kayu-notif-dismissed", "true");
   };
 
   if (!show) return null;

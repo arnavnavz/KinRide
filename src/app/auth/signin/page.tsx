@@ -39,13 +39,19 @@ function SignInForm() {
       <div className="w-full max-w-sm mx-auto px-6">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1 mb-2">
-            <span className="text-3xl font-bold text-primary">Kin</span>
-            <span className="text-3xl font-light text-foreground">Ride</span>
+            <span className="text-3xl font-bold text-primary">Ka</span>
+            <span className="text-3xl font-light text-foreground">yu</span>
           </div>
           <p className="text-gray-500 text-sm">Sign in to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+          {searchParams.get("verified") === "true" && (
+            <div className="bg-green-50 text-green-700 text-sm px-4 py-2.5 rounded-lg">
+              Email verified! You can now sign in.
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-2.5 rounded-lg">
               {error}
@@ -59,7 +65,7 @@ function SignInForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              placeholder="you@kinride.com"
+              placeholder="you@kayu.com"
               required
             />
           </div>
@@ -74,6 +80,11 @@ function SignInForm() {
               placeholder="password123"
               required
             />
+            <div className="mt-1 text-right">
+              <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button
@@ -97,8 +108,8 @@ function SignInForm() {
         <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <p className="text-xs text-gray-500 mb-2 font-medium">Demo Accounts (password: password123)</p>
           <div className="space-y-1 text-xs text-gray-600">
-            <p><span className="font-medium">Riders:</span> alice@kinride.com, bob@kinride.com</p>
-            <p><span className="font-medium">Drivers:</span> driver.carlos@kinride.com, driver.diana@kinride.com</p>
+            <p><span className="font-medium">Riders:</span> alice@kayu.com, bob@kayu.com</p>
+            <p><span className="font-medium">Drivers:</span> driver.carlos@kayu.com, driver.diana@kayu.com</p>
           </div>
         </div>
       </div>

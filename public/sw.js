@@ -1,4 +1,4 @@
-const CACHE_NAME = "kinride-v1";
+const CACHE_NAME = "kayu-v1";
 const PRECACHE_URLS = ["/", "/offline"];
 
 self.addEventListener("install", (event) => {
@@ -50,7 +50,7 @@ self.addEventListener("fetch", (event) => {
 // Push notification handler
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "KinRide";
+  const title = data.title || "Kayu";
   const options = {
     body: data.body || "You have a new update",
     icon: "/icons/icon-192.png",

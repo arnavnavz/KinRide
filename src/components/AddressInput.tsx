@@ -101,7 +101,7 @@ export function AddressInput({
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
-            { headers: { "User-Agent": "KinRide/1.0" } }
+            { headers: { "User-Agent": "Kayu/1.0" } }
           );
           const data = await res.json();
           if (data.display_name) {

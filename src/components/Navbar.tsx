@@ -63,6 +63,8 @@ export function Navbar() {
         <>
           <NavLink href="/rider/request" onClick={closeMenu}>{t("nav.request_ride")}</NavLink>
           <NavLink href="/rider/kin" onClick={closeMenu}>{t("nav.my_kin")}</NavLink>
+          <NavLink href="/rider/history" onClick={closeMenu}>Ride History</NavLink>
+          <NavLink href="/rider/promos" onClick={closeMenu}>Promos</NavLink>
         </>
       )}
       {isDriver && (
@@ -70,6 +72,7 @@ export function Navbar() {
           <NavLink href="/driver/dashboard" onClick={closeMenu}>{t("driver.dashboard")}</NavLink>
           <NavLink href="/driver/earnings" onClick={closeMenu}>{t("driver.earnings")}</NavLink>
           <NavLink href="/driver/analytics" onClick={closeMenu}>{t("driver.analytics")}</NavLink>
+          <NavLink href="/driver/history" onClick={closeMenu}>Ride History</NavLink>
         </>
       )}
       {session.user.role === "ADMIN" && (
@@ -95,8 +98,8 @@ export function Navbar() {
     <nav className="bg-white/80 dark:bg-card/80 backdrop-blur-lg border-b border-gray-200/60 dark:border-card-border sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href={isDriver ? "/driver/dashboard" : "/rider/request"} className="flex items-center gap-1.5">
-          <span className="text-xl font-bold text-primary">Kin</span>
-          <span className="text-xl font-light text-foreground">Ride</span>
+          <span className="text-xl font-bold text-primary">Ka</span>
+          <span className="text-xl font-light text-foreground">yu</span>
         </Link>
 
         {/* Desktop nav */}

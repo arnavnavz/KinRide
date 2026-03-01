@@ -302,7 +302,7 @@ export default function SharedEtaPage() {
 
         {/* Footer */}
         <p className="text-[10px] text-gray-400 text-center">
-          Auto-refreshes every 10s &middot; Shared via KinRide
+          Auto-refreshes every 10s &middot; Shared via Kayu
         </p>
       </div>
     </div>

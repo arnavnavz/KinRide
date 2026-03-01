@@ -1,8 +1,10 @@
+import "dotenv/config";
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { Server as SocketServer } from "socket.io";
 import { decode } from "next-auth/jwt";
+import { startBackgroundJobs } from "./src/lib/jobs";
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
@@ -124,6 +126,7 @@ app.prepare().then(() => {
 
   const port = parseInt(process.env.PORT || "3000", 10);
   server.listen(port, "0.0.0.0", () => {
-    console.log(`> KinRide ready on http://localhost:${port}`);
+    console.log(`> Kayu ready on http://localhost:${port}`);
+    startBackgroundJobs();
   });
 });

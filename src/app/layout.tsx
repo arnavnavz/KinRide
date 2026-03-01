@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KinRide — Your Trusted Ride Network",
+  title: "Kayu — Your Trusted Ride Network",
   description: "Request rides from drivers you trust. Build your Kin.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "KinRide",
+    title: "Kayu",
   },
   icons: {
     icon: "/icons/icon-192.png",

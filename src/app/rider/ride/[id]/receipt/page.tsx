@@ -77,7 +77,7 @@ export default function ReceiptPage() {
   });
 
   const receiptText = [
-    "=== KinRide Trip Receipt ===",
+    "=== Kayu Trip Receipt ===",
     "",
     `Date: ${formattedDate}`,
     `Time: ${formattedTime}`,
@@ -120,7 +120,7 @@ export default function ReceiptPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kinride-receipt-${ride.id.slice(0, 8)}.txt`;
+    a.download = `kayu-receipt-${ride.id.slice(0, 8)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -140,7 +140,7 @@ export default function ReceiptPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-white font-bold text-lg tracking-tight">KinRide</span>
+              <span className="text-white font-bold text-lg tracking-tight">Kayu</span>
             </div>
             <h1 className="text-white/90 text-sm font-medium">Trip Receipt</h1>
           </div>

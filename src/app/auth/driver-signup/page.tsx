@@ -103,6 +103,44 @@ export default function DriverSignupPage() {
   const [apiError, setApiError] = useState("");
   const [loading, setLoading] = useState(false);
   const [kinCode, setKinCode] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; preview?: string }>>({});
+  const [uploadError, setUploadError] = useState("");
+  const [driverUserId, setDriverUserId] = useState<string | null>(null);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
+  const [verifyingId, setVerifyingId] = useState(false);
+
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>, docType: string) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!validTypes.includes(file.type)) {
+      setUploadError("Invalid file type. Use JPEG, PNG, WebP, or PDF.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("File too large. Maximum 10MB.");
+      return;
+    }
+    setUploadError("");
+    setPendingFiles(prev => ({ ...prev, [docType]: file }));
+    const preview = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+    setUploadedFiles(prev => ({ ...prev, [docType]: { name: file.name, preview } }));
+  }
+
+  async function uploadPendingDocuments(sessionCookie?: string) {
+    for (const [docType, file] of Object.entries(pendingFiles)) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("type", docType);
+        await fetch("/api/driver/documents", { method: "POST", body: formData });
+      } catch {
+        // Non-critical: documents can be re-uploaded later
+      }
+    }
+  }
 
   const set = <K extends keyof FormData>(key: K, val: FormData[K]) => {
     setForm((f) => ({ ...f, [key]: val }));
@@ -176,6 +214,35 @@ export default function DriverSignupPage() {
         return;
       }
       setKinCode(data.user?.driverProfile?.kinCode || "");
+      setDriverUserId(data.user?.id || null);
+      // Auto-sign-in, upload documents, and start verification
+      try {
+        const signInRes = await fetch("/api/auth/callback/credentials", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
+            csrfToken: "",
+            json: "true",
+          }),
+        });
+        if (signInRes.ok) {
+          if (Object.keys(pendingFiles).length > 0) {
+            await uploadPendingDocuments();
+          }
+          // Start Stripe Identity verification
+          try {
+            const verifyRes = await fetch("/api/driver/verify", { method: "POST" });
+            if (verifyRes.ok) {
+              const verifyData = await verifyRes.json();
+              if (verifyData.url) setVerificationUrl(verifyData.url);
+            }
+          } catch { /* non-critical */ }
+        }
+      } catch {
+        // Non-critical
+      }
       setStep(3);
     } catch {
       setApiError("Something went wrong. Please try again.");
@@ -200,8 +267,8 @@ export default function DriverSignupPage() {
       <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-6 animate-fade-in">
           <div className="inline-flex items-center gap-1 mb-2">
-            <span className="text-3xl font-bold text-primary">Kin</span>
-            <span className="text-3xl font-light text-foreground">Ride</span>
+            <span className="text-3xl font-bold text-primary">Ka</span>
+            <span className="text-3xl font-light text-foreground">yu</span>
           </div>
           <p className="text-gray-500 text-sm">Driver Registration</p>
         </div>
@@ -315,50 +382,62 @@ export default function DriverSignupPage() {
                 Verification
               </h2>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Driver&#39;s License
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-                  <svg
-                    className="w-8 h-8 text-gray-300 mx-auto mb-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <p className="text-sm text-gray-400">Upload coming soon</p>
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg animate-fade-in">
+                  {uploadError}
                 </div>
-              </div>
+              )}
+
+              {[
+                { key: "license_front", label: "Driver's License (Front)" },
+                { key: "license_back", label: "Driver's License (Back)" },
+                { key: "insurance", label: "Insurance Card" },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {label}
+                  </label>
+                  {uploadedFiles[key] ? (
+                    <div className="border border-success/30 bg-success/5 rounded-xl p-4 flex items-center gap-3">
+                      {uploadedFiles[key].preview ? (
+                        <img src={uploadedFiles[key].preview} alt={label} className="w-12 h-12 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-success/10 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{uploadedFiles[key].name}</p>
+                        <p className="text-xs text-success">Uploaded</p>
+                      </div>
+                      <label className="text-xs text-primary cursor-pointer hover:underline">
+                        Replace
+                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleFileSelect(e, key)} />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors border-gray-300 hover:border-primary/40 hover:bg-primary/5">
+                          <svg className="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
+                          <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP, or PDF (max 10MB)</p>
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleFileSelect(e, key)} />
+                    </label>
+                  )}
+                </div>
+              ))}
 
               <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 flex gap-3">
-                <svg
-                  className="w-5 h-5 text-primary shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
+                <svg className="w-5 h-5 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Background Check
-                  </p>
+                  <p className="text-sm font-medium text-foreground">Background Check</p>
                   <p className="text-xs text-foreground/60 mt-0.5">
-                    A background check will be initiated after registration.
-                    You&#39;ll be notified once your account is verified and
-                    ready to accept rides.
+                    A background check will be initiated after registration. You&apos;ll be notified once your account is verified and ready to accept rides.
                   </p>
                 </div>
               </div>
@@ -371,20 +450,14 @@ export default function DriverSignupPage() {
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary"
                 />
                 <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
-                  I agree to the KinRide{" "}
-                  <span className="text-primary font-medium">
-                    Terms of Service
-                  </span>{" "}
+                  I agree to the Kayu{" "}
+                  <span className="text-primary font-medium">Terms of Service</span>{" "}
                   and{" "}
-                  <span className="text-primary font-medium">
-                    Driver Agreement
-                  </span>
+                  <span className="text-primary font-medium">Driver Agreement</span>
                 </span>
               </label>
               {errors.acceptTerms && (
-                <p className="text-danger text-xs -mt-2">
-                  {errors.acceptTerms}
-                </p>
+                <p className="text-danger text-xs -mt-2">{errors.acceptTerms}</p>
               )}
             </div>
           )}
@@ -407,14 +480,14 @@ export default function DriverSignupPage() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-foreground mb-1">
-                Welcome to KinRide!
+                Welcome to Kayu!
               </h2>
               <p className="text-sm text-foreground/60 mb-6">
                 Your driver account has been created.
               </p>
 
               {kinCode && (
-                <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 mb-6">
+                <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 mb-4">
                   <p className="text-xs text-foreground/50 mb-1">
                     Your Kin Code
                   </p>
@@ -422,18 +495,60 @@ export default function DriverSignupPage() {
                     {kinCode}
                   </p>
                   <p className="text-xs text-foreground/50 mt-1">
-                    Share this code with riders so they can add you to their Kin
-                    list
+                    Share this code with riders so they can add you to their Kin list
                   </p>
                 </div>
               )}
 
-              <button
-                onClick={() => router.push("/auth/signin")}
-                className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
-              >
-                Sign In to Dashboard
-              </button>
+              {/* Verification CTA */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-left">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Verify your identity to start driving</p>
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      Quick ID verification via Stripe — takes about 30 seconds. A background check runs automatically in the background.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {verificationUrl ? (
+                  <a
+                    href={verificationUrl}
+                    className="block w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors text-center"
+                  >
+                    Verify Identity Now
+                  </a>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      setVerifyingId(true);
+                      try {
+                        const res = await fetch("/api/driver/verify", { method: "POST" });
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.url) window.location.href = data.url;
+                        }
+                      } catch { /* ignore */ }
+                      setVerifyingId(false);
+                    }}
+                    disabled={verifyingId}
+                    className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50"
+                  >
+                    {verifyingId ? "Starting verification..." : "Verify Identity Now"}
+                  </button>
+                )}
+                <button
+                  onClick={() => router.push("/auth/signin")}
+                  className="w-full bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Skip for now — Sign In
+                </button>
+              </div>
             </div>
           )}
 

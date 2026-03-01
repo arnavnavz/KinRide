@@ -3,26 +3,13 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { PageSkeleton } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
+import { useI18n } from "@/lib/i18n-context";
 
-type Tab = "promos" | "referrals";
-
-interface Redemption {
-  id: string;
-  discount: number;
-  createdAt: string;
-  promoCode: {
-    code: string;
-    description: string;
-    discountType: string;
-    discountValue: number;
-    expiresAt: string | null;
-    isActive: boolean;
-  };
-}
-
-interface ReferralEntry {
+interface Referral {
   id: string;
   referralCode: string;
   refereeName: string | null;
@@ -31,383 +18,374 @@ interface ReferralEntry {
   createdAt: string;
 }
 
+interface PromoRedemption {
+  promoCode: {
+    code: string;
+    description: string;
+    discountType: string;
+    discountValue: number;
+    expiresAt: string | null;
+    isActive: boolean;
+  };
+  discount: number;
+  createdAt: string;
+}
+
 export default function PromosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("promos");
+  const { toast } = useToast();
+  const { t } = useI18n();
 
-  const [promoCode, setPromoCode] = useState("");
-  const [applyingPromo, setApplyingPromo] = useState(false);
-  const [promoMessage, setPromoMessage] = useState("");
-  const [promoError, setPromoError] = useState("");
-  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
-
+  const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState("");
-  const [rewardAmount, setRewardAmount] = useState(5);
-  const [referrals, setReferrals] = useState<ReferralEntry[]>([]);
-  const [referralInput, setReferralInput] = useState("");
-  const [redeemingReferral, setRedeemingReferral] = useState(false);
-  const [referralMessage, setReferralMessage] = useState("");
-  const [referralError, setReferralError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [rewardAmount, setRewardAmount] = useState(0);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [promos, setPromos] = useState<PromoRedemption[]>([]);
+
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/signin");
   }, [status, router]);
 
-  useEffect(() => {
-    fetch("/api/promo")
-      .then((r) => r.json())
-      .then((data) => setRedemptions(data.redemptions || []))
-      .catch(() => {});
-
-    fetch("/api/referral")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.referralCode) setReferralCode(data.referralCode);
-        if (data.rewardAmount) setRewardAmount(data.rewardAmount);
-        if (data.referrals) setReferrals(data.referrals);
-      })
-      .catch(() => {});
-  }, []);
-
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim()) return;
-    setApplyingPromo(true);
-    setPromoMessage("");
-    setPromoError("");
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/promo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: promoCode.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setPromoError(data.error || "Failed to apply promo");
-      } else {
-        setPromoMessage(data.message);
-        setPromoCode("");
-        if (data.redemption) {
-          setRedemptions((prev) => [data.redemption, ...prev]);
-        }
+      const [refRes, promoRes] = await Promise.all([
+        fetch("/api/referral"),
+        fetch("/api/promo"),
+      ]);
+
+      if (refRes.ok) {
+        const data = await refRes.json();
+        setReferralCode(data.referralCode);
+        setRewardAmount(data.rewardAmount);
+        setReferrals(data.referrals ?? []);
+      }
+
+      if (promoRes.ok) {
+        const data = await promoRes.json();
+        setPromos(data.redemptions ?? []);
       }
     } catch {
-      setPromoError("Something went wrong");
+      toast("Failed to load data", "error");
+    } finally {
+      setLoading(false);
     }
-    setApplyingPromo(false);
+  }, [toast]);
+
+  useEffect(() => {
+    if (status === "authenticated") loadData();
+  }, [status, loadData]);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(referralCode);
+      toast("Referral code copied!", "success");
+    } catch {
+      toast("Could not copy code", "error");
+    }
   };
 
-  const handleRedeemReferral = async () => {
-    if (!referralInput.trim()) return;
-    setRedeemingReferral(true);
-    setReferralMessage("");
-    setReferralError("");
+  const shareCode = async () => {
+    const text = `Use my Kayu referral code ${referralCode} to get $${rewardAmount.toFixed(2)} off your first ride!`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Kayu Referral", text });
+      } catch {
+        /* user cancelled */
+      }
+    } else {
+      await copyCode();
+    }
+  };
+
+  const handleRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = redeemCode.trim().toUpperCase();
+    if (!code) return;
+
+    setRedeeming(true);
     try {
       const res = await fetch("/api/referral", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: referralInput.trim() }),
+        body: JSON.stringify({ code }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setReferralError(data.error || "Failed to redeem");
+        toast(data.error || data.message || "Invalid code", "error");
       } else {
-        setReferralMessage(data.message);
-        setReferralInput("");
+        toast(data.message || `You earned $${data.rewardAmount?.toFixed(2)} credit!`, "success");
+        setRedeemCode("");
+        loadData();
       }
     } catch {
-      setReferralError("Something went wrong");
+      toast("Something went wrong", "error");
+    } finally {
+      setRedeeming(false);
     }
-    setRedeemingReferral(false);
   };
 
-  const copyReferralCode = async () => {
-    try {
-      await navigator.clipboard.writeText(referralCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard not available */ }
-  };
-
-  if (status === "loading") {
+  if (status === "loading" || (status === "authenticated" && loading)) {
     return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 sm:p-6 max-w-2xl mx-auto">
+        <PageSkeleton />
       </div>
     );
   }
 
-  if (session?.user?.role !== "RIDER") {
-    return <div className="text-center py-20 text-foreground/60">This page is for riders only.</div>;
-  }
+  const redeemedCount = referrals.filter((r) => r.isRedeemed).length;
+  const totalEarned = referrals
+    .filter((r) => r.isRedeemed)
+    .reduce((sum, r) => sum + r.rewardAmount, 0);
 
   return (
-    <div className="min-h-[100dvh] bg-background">
-      {/* Header */}
-      <div className="safe-top bg-card border-b border-card-border px-5 pb-4 pt-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-24 space-y-5 animate-fade-in">
+        {/* Header */}
         <div className="flex items-center gap-3">
-          <Link href="/rider/request" className="p-1 text-foreground/50 hover:text-foreground transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <Link
+            href="/rider/request"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="text-lg font-bold text-foreground">Promos & Referrals</h1>
-          <div className="ml-auto">
-            <Avatar name={session?.user?.name || "U"} size="sm" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Promos & Referrals</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Earn credits and save on rides</p>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex mt-4 bg-subtle rounded-xl p-1">
-          <button
-            onClick={() => setTab("promos")}
-            className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              tab === "promos"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-foreground/50 hover:text-foreground/70"
-            }`}
-          >
-            Promo Codes
-          </button>
-          <button
-            onClick={() => setTab("referrals")}
-            className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              tab === "referrals"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-foreground/50 hover:text-foreground/70"
-            }`}
-          >
-            Refer & Earn
-          </button>
-        </div>
-      </div>
-
-      <div className="px-5 py-5">
-        {/* Promo Codes Tab */}
-        {tab === "promos" && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="space-y-3">
-              <p className="text-sm text-foreground/60">Enter a promo code to get a discount on your next ride.</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder="Enter promo code"
-                  className="flex-1 bg-subtle border border-card-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary font-mono tracking-wider"
-                  onKeyDown={(e) => e.key === "Enter" && handleApplyPromo()}
-                />
-                <button
-                  onClick={handleApplyPromo}
-                  disabled={applyingPromo || !promoCode.trim()}
-                  className="bg-primary text-white px-5 py-3 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all disabled:opacity-40 active:scale-[0.98] shrink-0"
-                >
-                  {applyingPromo ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    "Apply"
-                  )}
-                </button>
-              </div>
-
-              {promoMessage && (
-                <div className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm px-4 py-2.5 rounded-lg animate-fade-in">
-                  {promoMessage}
-                </div>
-              )}
-              {promoError && (
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2.5 rounded-lg animate-fade-in">
-                  {promoError}
-                </div>
-              )}
+        {/* Referral Code Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
             </div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Your Referral Code</h2>
+          </div>
 
-            {/* Applied promos */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-medium text-foreground/40 uppercase tracking-wide">
-                Applied Promos ({redemptions.length})
-              </h3>
-              {redemptions.length === 0 ? (
-                <div className="text-center py-8 text-foreground/30">
-                  <svg className="w-10 h-10 mx-auto mb-2 text-foreground/15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                  <p className="text-sm">No promo codes applied yet</p>
-                </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center mb-4">
+            <p className="text-2xl font-bold tracking-widest text-primary">{referralCode}</p>
+          </div>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
+            Both you and your friend get <span className="font-semibold text-primary">${rewardAmount.toFixed(2)}</span> credit!
+          </p>
+
+          <div className="flex gap-2">
+            <button
+              onClick={copyCode}
+              className="flex-1 flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copy
+            </button>
+            <button
+              onClick={shareCode}
+              className="flex-1 flex items-center justify-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share
+            </button>
+          </div>
+
+          {/* Stats row */}
+          {referrals.length > 0 && (
+            <div className="flex items-center justify-around mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div className="text-center">
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{referrals.length}</p>
+                <p className="text-xs text-gray-500">Invited</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{redeemedCount}</p>
+                <p className="text-xs text-gray-500">Joined</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-primary">${totalEarned.toFixed(2)}</p>
+                <p className="text-xs text-gray-500">Earned</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Redeem Code Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Redeem a Code</h2>
+          </div>
+
+          <form onSubmit={handleRedeem} className="flex gap-2">
+            <input
+              type="text"
+              value={redeemCode}
+              onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+              placeholder="Enter referral code"
+              className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal text-gray-900 dark:text-white"
+            />
+            <button
+              type="submit"
+              disabled={redeeming || !redeemCode.trim()}
+              className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              {redeeming ? (
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
               ) : (
-                <div className="space-y-2">
-                  {redemptions.map((r) => (
-                    <div key={r.id} className="bg-card border border-card-border rounded-xl p-4 animate-fade-in">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-bold text-primary tracking-wider">{r.promoCode.code}</span>
-                            {r.promoCode.isActive ? (
-                              <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">Active</span>
-                            ) : (
-                              <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-foreground/40 px-1.5 py-0.5 rounded-full font-medium">Expired</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-foreground/50 mt-1">{r.promoCode.description}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-lg font-bold text-primary">
-                            {r.promoCode.discountType === "percentage"
-                              ? `${r.promoCode.discountValue}%`
-                              : `$${r.promoCode.discountValue.toFixed(2)}`}
-                          </span>
-                          <p className="text-[10px] text-foreground/40">off</p>
-                        </div>
-                      </div>
-                      {r.promoCode.expiresAt && (
-                        <p className="text-[10px] text-foreground/30 mt-2">
-                          Expires {new Date(r.promoCode.expiresAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                "Redeem"
               )}
-            </div>
-          </div>
-        )}
+            </button>
+          </form>
+        </div>
 
-        {/* Referrals Tab */}
-        {tab === "referrals" && (
-          <div className="space-y-5 animate-fade-in">
-            {/* Referral code card */}
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-5 space-y-4">
-              <div className="text-center space-y-1">
-                <h3 className="text-base font-bold text-foreground">Share your code, earn rewards</h3>
-                <p className="text-sm text-foreground/50">
-                  You and your friend both get <span className="font-semibold text-primary">${rewardAmount.toFixed(2)}</span> in ride credits
-                </p>
+        {/* Referral History */}
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Your Referral History</h2>
+          {referrals.length === 0 ? (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
               </div>
-
-              <div className="flex items-center justify-center gap-3">
-                <div className="bg-card border-2 border-dashed border-primary/30 rounded-xl px-6 py-3">
-                  <span className="font-mono text-xl font-bold text-primary tracking-[0.2em]">
-                    {referralCode || "..."}
+              <p className="text-sm font-medium text-gray-900 dark:text-white">No referrals yet</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Share your code with friends to earn credits</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {referrals.map((r) => (
+                <div
+                  key={r.id}
+                  className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 flex items-center gap-3"
+                >
+                  {r.isRedeemed && r.refereeName ? (
+                    <Avatar name={r.refereeName} size="sm" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {r.isRedeemed && r.refereeName ? r.refereeName : "Pending"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(r.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      r.isRedeemed
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    }`}
+                  >
+                    {r.isRedeemed ? `+$${r.rewardAmount.toFixed(2)}` : "Pending"}
                   </span>
                 </div>
-                <button
-                  onClick={copyReferralCode}
-                  disabled={!referralCode}
-                  className={`p-3 rounded-xl transition-all active:scale-95 ${
-                    copied
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-600"
-                      : "bg-primary/10 text-primary hover:bg-primary/20"
-                  }`}
-                >
-                  {copied ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-              <div className="flex items-center gap-3 bg-card/50 rounded-xl p-3 text-xs text-foreground/50">
-                <svg className="w-4 h-4 shrink-0 text-primary/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        {/* Applied Promos */}
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Applied Promos</h2>
+          {promos.length === 0 ? (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                 </svg>
-                Share your code with friends. When they sign up and use it, you both receive ride credits.
               </div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">No promos applied</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Promo discounts will appear here when you use them</p>
             </div>
+          ) : (
+            <div className="space-y-2">
+              {promos.map((p, i) => {
+                const isExpired = p.promoCode.expiresAt && new Date(p.promoCode.expiresAt) < new Date();
+                const discountLabel =
+                  p.promoCode.discountType === "percentage"
+                    ? `${p.promoCode.discountValue}% off`
+                    : `$${p.promoCode.discountValue.toFixed(2)} off`;
 
-            {/* Redeem someone else's code */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-medium text-foreground/40 uppercase tracking-wide">Have a friend&apos;s code?</h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={referralInput}
-                  onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
-                  placeholder="Enter referral code"
-                  className="flex-1 bg-subtle border border-card-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary font-mono tracking-wider"
-                  onKeyDown={(e) => e.key === "Enter" && handleRedeemReferral()}
-                />
-                <button
-                  onClick={handleRedeemReferral}
-                  disabled={redeemingReferral || !referralInput.trim()}
-                  className="bg-primary text-white px-5 py-3 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all disabled:opacity-40 active:scale-[0.98] shrink-0"
-                >
-                  {redeemingReferral ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    "Redeem"
-                  )}
-                </button>
-              </div>
-
-              {referralMessage && (
-                <div className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm px-4 py-2.5 rounded-lg animate-fade-in">
-                  {referralMessage}
-                </div>
-              )}
-              {referralError && (
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2.5 rounded-lg animate-fade-in">
-                  {referralError}
-                </div>
-              )}
-            </div>
-
-            {/* Referrals list */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-medium text-foreground/40 uppercase tracking-wide">
-                Your Referrals ({referrals.filter((r) => r.isRedeemed).length} redeemed)
-              </h3>
-              {referrals.length === 0 ? (
-                <div className="text-center py-8 text-foreground/30">
-                  <svg className="w-10 h-10 mx-auto mb-2 text-foreground/15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <p className="text-sm">No referrals yet — share your code!</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {referrals.map((r) => (
-                    <div key={r.id} className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 animate-fade-in">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                        r.isRedeemed
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                          : "bg-foreground/5 text-foreground/30"
-                      }`}>
-                        {r.isRedeemed ? (
-                          <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                return (
+                  <div
+                    key={i}
+                    className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                           </svg>
-                        ) : (
-                          <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white tracking-wider">
+                            {p.promoCode.code}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{p.promoCode.description}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {r.isRedeemed ? (r.refereeName || "Friend") : "Pending"}
-                        </p>
-                        <p className="text-[11px] text-foreground/40">
-                          {r.isRedeemed
-                            ? `Earned $${r.rewardAmount.toFixed(2)} · ${new Date(r.createdAt).toLocaleDateString()}`
-                            : "Waiting for someone to use this code"}
-                        </p>
-                      </div>
-                      <span className={`text-sm font-semibold shrink-0 ${r.isRedeemed ? "text-green-500" : "text-foreground/20"}`}>
-                        +${r.rewardAmount.toFixed(2)}
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${
+                          isExpired
+                            ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500"
+                            : p.promoCode.isActive
+                              ? "bg-primary/10 text-primary"
+                              : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500"
+                        }`}
+                      >
+                        {discountLabel}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                      <p className="text-xs text-gray-400">
+                        Saved <span className="font-medium text-green-600 dark:text-green-400">${p.discount.toFixed(2)}</span>
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {isExpired ? (
+                          <span className="text-red-500">Expired</span>
+                        ) : p.promoCode.expiresAt ? (
+                          <>Expires {new Date(p.promoCode.expiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>
+                        ) : (
+                          <span className="text-green-600 dark:text-green-400">No expiry</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
