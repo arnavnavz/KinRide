@@ -2,12 +2,26 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getRedis } from "@/lib/redis";
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Try Redis cache first
+    const redis = getRedis();
+    if (redis) {
+      try {
+        const cached = await redis.get("admin:stats");
+        if (cached) {
+          return NextResponse.json(typeof cached === "string" ? JSON.parse(cached) : cached);
+        }
+      } catch (e) {
+        console.error("Redis get error:", e);
+      }
     }
 
     const [
@@ -64,7 +78,7 @@ export async function GET() {
       }),
     ]);
 
-    return NextResponse.json({
+    const responseData = {
       users: { total: totalUsers, drivers: totalDrivers, riders: totalRiders },
       rides: { total: totalRides, completed: completedRides, canceled: canceledRides, active: activeRides },
       earnings: {
@@ -83,7 +97,18 @@ export async function GET() {
               ) / 10
             : null,
       })),
-    });
+    };
+
+    // Cache the result in Redis with 60-second TTL
+    if (redis) {
+      try {
+        await redis.set("admin:stats", JSON.stringify(responseData), { ex: 60 });
+      } catch (e) {
+        console.error("Redis set error:", e);
+      }
+    }
+
+    return NextResponse.json(responseData);
   } catch (err) {
     console.error("GET /api/admin/stats error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

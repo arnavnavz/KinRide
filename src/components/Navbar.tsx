@@ -49,7 +49,7 @@ export function Navbar() {
     fetchUnread();
     const interval = setInterval(fetchUnread, 10_000);
     return () => clearInterval(interval);
-  }, [session?.user]);
+  }, [session?.user?.id]);
 
   if (!session?.user) return null;
 
@@ -73,6 +73,7 @@ export function Navbar() {
           <NavLink href="/driver/earnings" onClick={closeMenu}>{t("driver.earnings")}</NavLink>
           <NavLink href="/driver/analytics" onClick={closeMenu}>{t("driver.analytics")}</NavLink>
           <NavLink href="/driver/history" onClick={closeMenu}>Ride History</NavLink>
+          <NavLink href="/driver/heatmap" onClick={closeMenu}>Demand Map</NavLink>
         </>
       )}
       {session.user.role === "ADMIN" && (

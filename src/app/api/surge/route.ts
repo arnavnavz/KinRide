@@ -14,5 +14,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ...surge,
     label: getSurgeLabel(surge.multiplier),
+  }, {
+    headers: { "Cache-Control": "private, s-maxage=30" },
   });
 }

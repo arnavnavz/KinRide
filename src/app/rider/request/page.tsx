@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { AddressInput } from "@/components/AddressInput";
 import { Avatar } from "@/components/Avatar";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -354,29 +354,34 @@ export default function RequestRidePage() {
 
   const selectedRide = RIDE_TYPES.find((r) => r.id === selectedType)!;
   // Show price from API or client-side estimate when we have coords (so price always shows when booking)
-  const displayBaseFare =
-    baseFare ??
-    (pickupCoords && dropoffCoords
-      ? (() => {
-          const toRad = (d: number) => (d * Math.PI) / 180;
-          const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
-          const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
-          const straight = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const roadMiles = straight * 1.3;
-          return Math.round((3 + roadMiles * 2) * 100) / 100;
-        })()
-      : null);
-  const fareForType = displayBaseFare ? Math.round(displayBaseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
+  const displayBaseFare = useMemo(() => {
+    if (baseFare !== null && baseFare !== undefined) return baseFare;
+    if (!pickupCoords || !dropoffCoords) return null;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
+    const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
+    const straight = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const roadMiles = straight * 1.3;
+    return Math.round((3 + roadMiles * 2) * 100) / 100;
+  }, [baseFare, pickupCoords, dropoffCoords]);
+  const fareForType = useMemo(() => {
+    return displayBaseFare ? Math.round(displayBaseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
+  }, [displayBaseFare, selectedRide.multiplier, surge.multiplier]);
 
-  const promoDiscount = fareForType && appliedPromo
-    ? appliedPromo.discountType === "percentage"
-      ? Math.round(fareForType * (appliedPromo.discountValue / 100) * 100) / 100
-      : Math.min(appliedPromo.discountValue, fareForType)
-    : 0;
-  const finalFare = fareForType ? Math.round((fareForType - promoDiscount) * 100) / 100 : null;
+  const promoDiscount = useMemo(() => {
+    return fareForType && appliedPromo
+      ? appliedPromo.discountType === "percentage"
+        ? Math.round(fareForType * (appliedPromo.discountValue / 100) * 100) / 100
+        : Math.min(appliedPromo.discountValue, fareForType)
+      : 0;
+  }, [fareForType, appliedPromo]);
+
+  const finalFare = useMemo(() => {
+    return fareForType ? Math.round((fareForType - promoDiscount) * 100) / 100 : null;
+  }, [fareForType, promoDiscount]);
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-background overflow-hidden relative">

@@ -32,7 +32,9 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json(ride);
+    return NextResponse.json(ride, {
+      headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30" },
+    });
   } catch (err) {
     console.error("GET /api/rides/share/[token] error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

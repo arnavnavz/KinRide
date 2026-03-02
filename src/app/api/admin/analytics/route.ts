@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
 
     const rides = await prisma.rideRequest.findMany({
       where: { createdAt: { gte: startDate } },
+      orderBy: { createdAt: "asc" },
+      take: 10000,
       select: {
         createdAt: true,
         status: true,
@@ -70,6 +72,8 @@ export async function GET(req: NextRequest) {
 
     const users = await prisma.user.findMany({
       where: { createdAt: { gte: startDate } },
+      orderBy: { createdAt: "asc" },
+      take: 10000,
       select: { createdAt: true, role: true },
     });
 

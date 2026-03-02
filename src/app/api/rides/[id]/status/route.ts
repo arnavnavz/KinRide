@@ -34,7 +34,7 @@ export async function POST(
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const ride = await prisma.rideRequest.findUnique({ where: { id } });
+    const ride = await prisma.rideRequest.findUnique({ where: { id }, select: { id: true, driverId: true, riderId: true, status: true, estimatedFare: true, isKinRide: true, pickupAddress: true, dropoffAddress: true } });
     if (!ride) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

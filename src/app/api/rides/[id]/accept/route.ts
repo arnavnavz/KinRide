@@ -16,7 +16,7 @@ export async function POST(
     }
 
     // Pre-check: ride must be in OFFERED status
-    const ride = await prisma.rideRequest.findUnique({ where: { id } });
+    const ride = await prisma.rideRequest.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!ride) {
       return NextResponse.json({ error: "Ride not found" }, { status: 404 });
     }

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tip amount must be between $1 and $100" }, { status: 400 });
     }
 
-    const ride = await prisma.rideRequest.findUnique({ where: { id: rideRequestId } });
+    const ride = await prisma.rideRequest.findUnique({ where: { id: rideRequestId }, select: { id: true, riderId: true, driverId: true, status: true } });
     if (!ride) {
       return NextResponse.json({ error: "Ride not found" }, { status: 404 });
     }

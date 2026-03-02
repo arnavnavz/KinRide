@@ -126,7 +126,7 @@ export default function DriverDashboard() {
     if (session?.user?.id) {
       joinUser(session.user.id);
     }
-    const interval = setInterval(loadData, 5000);
+    const interval = setInterval(loadData, 8000);
     return () => clearInterval(interval);
   }, [loadData, session?.user?.id, joinUser]);
 
@@ -472,6 +472,30 @@ export default function DriverDashboard() {
           )}
         </div>
       )}
+
+      {/* Demand Map Quick Link */}
+      <button
+        onClick={() => router.push("/driver/heatmap")}
+        className="w-full bg-card rounded-2xl shadow-sm border border-card-border p-5 card-hover text-left"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Demand Map</p>
+              <p className="text-xs text-foreground/50">Find busy areas near you</p>
+            </div>
+          </div>
+          <svg className="w-4 h-4 text-foreground/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </button>
 
       {/* Incoming Offers */}
       <div>

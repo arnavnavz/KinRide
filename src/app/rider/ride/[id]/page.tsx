@@ -124,7 +124,7 @@ export default function RiderRidePage() {
   useEffect(() => {
     loadRide();
     joinRide(rideId);
-    const interval = setInterval(loadRide, 5000);
+    const interval = setInterval(loadRide, 8000);
     return () => clearInterval(interval);
   }, [rideId, loadRide, joinRide]);
 
@@ -147,7 +147,7 @@ export default function RiderRidePage() {
     if (!ride) return;
     geocodeAddress(ride.pickupAddress).then(setPickupCoords);
     geocodeAddress(ride.dropoffAddress).then(setDropoffCoords);
-  }, [ride?.pickupAddress, ride?.dropoffAddress]);
+  }, [ride?.id]);
 
   useEffect(() => {
     if (!pickupCoords || !dropoffCoords) {
