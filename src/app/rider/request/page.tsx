@@ -293,6 +293,7 @@ export default function RequestRidePage() {
           scheduledAt: scheduledAt || undefined,
           riderNote: riderNote.trim() || undefined,
           ...(pickupCoords ? { riderLat: pickupCoords.lat, riderLng: pickupCoords.lng } : {}),
+          ...(dropoffCoords ? { dropoffLat: dropoffCoords.lat, dropoffLng: dropoffCoords.lng } : {}),
         }),
       });
       if (!res.ok) {

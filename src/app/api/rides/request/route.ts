@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { pickupAddress, dropoffAddress, preferKin, specificDriverId, scheduledAt, riderNote, rideType } = parsed.data;
-    const { riderLat, riderLng } = body;
+    const { riderLat, riderLng, dropoffLat, dropoffLng } = body;
 
     const nearLocation = (typeof riderLat === "number" && typeof riderLng === "number") ? { lat: riderLat, lng: riderLng } : undefined;
     let fare = await estimateFare(pickupAddress, dropoffAddress, nearLocation);
@@ -75,6 +75,10 @@ export async function POST(req: NextRequest) {
         isKinRide,
         riderNote: riderNote ?? null,
         rideType: rideType ?? "regular",
+      pickupLat: typeof riderLat === "number" ? riderLat : null,
+      pickupLng: typeof riderLng === "number" ? riderLng : null,
+      dropoffLat: typeof dropoffLat === "number" ? dropoffLat : null,
+      dropoffLng: typeof dropoffLng === "number" ? dropoffLng : null,
       },
     });
 

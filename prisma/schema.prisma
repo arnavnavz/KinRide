@@ -193,6 +193,10 @@ model RideRequest {
   driver           User?      @relation("DriverRides", fields: [driverId], references: [id])
   pickupAddress    String
   dropoffAddress   String
+  pickupLat        Float?
+  pickupLng        Float?
+  dropoffLat       Float?
+  dropoffLng       Float?
   status           RideStatus @default(REQUESTED)
   preferKin        Boolean    @default(false)
   specificDriverId String?
