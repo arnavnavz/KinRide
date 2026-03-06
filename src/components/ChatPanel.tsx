@@ -74,7 +74,7 @@ export function ChatPanel({ rideId, currentUserId, receiverId }: ChatPanelProps)
 
     fetch(`/api/rides/${rideId}/messages`)
       .then((r) => r.json())
-      .then(setMessages)
+      .then((data) => { if (Array.isArray(data)) setMessages(data); })
       .catch(console.error);
 
     const unsub = onEvent("chat:message", (msg: unknown) => {

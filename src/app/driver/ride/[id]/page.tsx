@@ -114,8 +114,10 @@ export default function DriverRidePage() {
           lastEmitRef.current = now;
           emitDriverLocation(rideId, lat, lng, heading, speed);
         }
-        // Persist to DB every 30s (socket handles real-time; DB is fallback)
-        if (now - lastPersistRef.current >= 30000) {
+        // Persist to DB: every 5s during IN_PROGRESS (for route monitoring),
+        // every 30s otherwise (socket handles real-time; DB is fallback)
+        const persistInterval = ride?.status === "IN_PROGRESS" ? 5000 : 30000;
+        if (now - lastPersistRef.current >= persistInterval) {
           lastPersistRef.current = now;
           fetch("/api/driver/location", {
             method: "POST",

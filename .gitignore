@@ -44,3 +44,8 @@ next-env.d.ts
 # Uploaded documents
 public/uploads/documents/*
 !public/uploads/documents/.gitkeep
+
+# Playwright
+playwright-report/
+test-results/
+tests/e2e/.auth/

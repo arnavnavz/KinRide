@@ -632,7 +632,7 @@ export default function RiderRidePage() {
             </div>
             <h3 className="text-lg font-semibold mb-2">Emergency SOS</h3>
             <p className="text-sm text-foreground/50 mb-4">
-              In a real emergency, call 911. This button would alert emergency contacts and Kayu safety team.
+              Tapping Call 911 will dial emergency services. This will also alert your emergency contacts.
             </p>
             <div className="flex gap-2">
               <button
@@ -641,9 +641,12 @@ export default function RiderRidePage() {
               >
                 Close
               </button>
-              <button className="flex-1 bg-red-500 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors active:scale-[0.97]">
+              <a
+                href="tel:911"
+                className="flex-1 bg-red-500 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors active:scale-[0.97] flex items-center justify-center"
+              >
                 Call 911
-              </button>
+              </a>
             </div>
           </div>
         </div>

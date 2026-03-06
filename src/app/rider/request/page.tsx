@@ -316,6 +316,37 @@ export default function RequestRidePage() {
     }
   };
 
+  const selectedRide = RIDE_TYPES.find((r) => r.id === selectedType)!;
+  // Show price from API or client-side estimate when we have coords (so price always shows when booking)
+  const displayBaseFare = useMemo(() => {
+    if (baseFare !== null && baseFare !== undefined) return baseFare;
+    if (!pickupCoords || !dropoffCoords) return null;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
+    const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
+    const straight = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const roadMiles = straight * 1.3;
+    return Math.round((3 + roadMiles * 2) * 100) / 100;
+  }, [baseFare, pickupCoords, dropoffCoords]);
+  const fareForType = useMemo(() => {
+    return displayBaseFare ? Math.round(displayBaseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
+  }, [displayBaseFare, selectedRide.multiplier, surge.multiplier]);
+
+  const promoDiscount = useMemo(() => {
+    return fareForType && appliedPromo
+      ? appliedPromo.discountType === "percentage"
+        ? Math.round(fareForType * (appliedPromo.discountValue / 100) * 100) / 100
+        : Math.min(appliedPromo.discountValue, fareForType)
+      : 0;
+  }, [fareForType, appliedPromo]);
+
+  const finalFare = useMemo(() => {
+    return fareForType ? Math.round((fareForType - promoDiscount) * 100) / 100 : null;
+  }, [fareForType, promoDiscount]);
+
   if (status === "loading") {
     return <div className="fixed inset-0 bg-background flex items-center justify-center"><div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
   }
@@ -353,36 +384,6 @@ export default function RequestRidePage() {
     setApplyingPromo(false);
   };
 
-  const selectedRide = RIDE_TYPES.find((r) => r.id === selectedType)!;
-  // Show price from API or client-side estimate when we have coords (so price always shows when booking)
-  const displayBaseFare = useMemo(() => {
-    if (baseFare !== null && baseFare !== undefined) return baseFare;
-    if (!pickupCoords || !dropoffCoords) return null;
-    const toRad = (d: number) => (d * Math.PI) / 180;
-    const dLat = toRad(dropoffCoords.lat - pickupCoords.lat);
-    const dLng = toRad(dropoffCoords.lng - pickupCoords.lng);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(pickupCoords.lat)) * Math.cos(toRad(dropoffCoords.lat)) * Math.sin(dLng / 2) ** 2;
-    const straight = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const roadMiles = straight * 1.3;
-    return Math.round((3 + roadMiles * 2) * 100) / 100;
-  }, [baseFare, pickupCoords, dropoffCoords]);
-  const fareForType = useMemo(() => {
-    return displayBaseFare ? Math.round(displayBaseFare * selectedRide.multiplier * surge.multiplier * 100) / 100 : null;
-  }, [displayBaseFare, selectedRide.multiplier, surge.multiplier]);
-
-  const promoDiscount = useMemo(() => {
-    return fareForType && appliedPromo
-      ? appliedPromo.discountType === "percentage"
-        ? Math.round(fareForType * (appliedPromo.discountValue / 100) * 100) / 100
-        : Math.min(appliedPromo.discountValue, fareForType)
-      : 0;
-  }, [fareForType, appliedPromo]);
-
-  const finalFare = useMemo(() => {
-    return fareForType ? Math.round((fareForType - promoDiscount) * 100) / 100 : null;
-  }, [fareForType, promoDiscount]);
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-background overflow-hidden relative">
