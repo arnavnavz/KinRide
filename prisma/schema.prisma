@@ -197,6 +197,7 @@ model RideRequest {
   pickupLng        Float?
   dropoffLat       Float?
   dropoffLng       Float?
+  routePolyline    Json?
   status           RideStatus @default(REQUESTED)
   preferKin        Boolean    @default(false)
   specificDriverId String?
@@ -416,13 +417,16 @@ model PushSubscription {
 }
 
 model DriverLocation {
-  id        String   @id @default(cuid())
-  driverId  String   @unique
-  lat       Float
-  lng       Float
-  heading   Float?
-  speed     Float?
-  updatedAt DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  driverId             String    @unique
+  lat                  Float
+  lng                  Float
+  heading              Float?
+  speed                Float?
+  stoppedSince         DateTime?
+  lastDeviationAlertAt DateTime?
+  lastStopAlertAt      DateTime?
+  updatedAt            DateTime  @updatedAt
 
   @@index([driverId])
   @@index([updatedAt])

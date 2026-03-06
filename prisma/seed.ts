@@ -13,10 +13,10 @@ async function main() {
 
   // Riders
   const rider1 = await prisma.user.upsert({
-    where: { email: "alice@kinride.com" },
+    where: { email: "alice@kayu.com" },
     update: {},
     create: {
-      email: "alice@kinride.com",
+      email: "alice@kayu.com",
       name: "Alice Johnson",
       passwordHash: password,
       role: Role.RIDER,
@@ -25,10 +25,10 @@ async function main() {
   });
 
   const rider2 = await prisma.user.upsert({
-    where: { email: "bob@kinride.com" },
+    where: { email: "bob@kayu.com" },
     update: {},
     create: {
-      email: "bob@kinride.com",
+      email: "bob@kayu.com",
       name: "Bob Smith",
       passwordHash: password,
       role: Role.RIDER,
@@ -39,7 +39,7 @@ async function main() {
   // Drivers
   const drivers = [
     {
-      email: "driver.carlos@kinride.com",
+      email: "driver.carlos@kayu.com",
       name: "Carlos Martinez",
       phone: "+1555001001",
       vehicle: { make: "Toyota", model: "Camry", year: 2022, color: "Silver", plate: "KIN-001" },
@@ -47,7 +47,7 @@ async function main() {
       verified: true,
     },
     {
-      email: "driver.diana@kinride.com",
+      email: "driver.diana@kayu.com",
       name: "Diana Lee",
       phone: "+1555001002",
       vehicle: { make: "Honda", model: "Civic", year: 2023, color: "Blue", plate: "KIN-002" },
@@ -55,7 +55,7 @@ async function main() {
       verified: true,
     },
     {
-      email: "driver.eric@kinride.com",
+      email: "driver.eric@kayu.com",
       name: "Eric Thompson",
       phone: "+1555001003",
       vehicle: { make: "Ford", model: "Escape", year: 2021, color: "Black", plate: "KIN-003" },
@@ -63,7 +63,7 @@ async function main() {
       verified: true,
     },
     {
-      email: "driver.fiona@kinride.com",
+      email: "driver.fiona@kayu.com",
       name: "Fiona Garcia",
       phone: "+1555001004",
       vehicle: { make: "Hyundai", model: "Elantra", year: 2023, color: "White", plate: "KIN-004" },
@@ -71,7 +71,7 @@ async function main() {
       verified: false,
     },
     {
-      email: "driver.george@kinride.com",
+      email: "driver.george@kayu.com",
       name: "George Wilson",
       phone: "+1555001005",
       vehicle: { make: "Chevrolet", model: "Malibu", year: 2022, color: "Red", plate: "KIN-005" },
@@ -129,10 +129,10 @@ async function main() {
 
   console.log("Seeded successfully!");
   console.log("\n--- Login Credentials (all use password: password123) ---");
-  console.log("Riders:  alice@kinride.com, bob@kinride.com");
-  console.log("Drivers: driver.carlos@kinride.com (CARLOS1), driver.diana@kinride.com (DIANA22)");
-  console.log("         driver.eric@kinride.com (ERICT3), driver.fiona@kinride.com (FIONA4)");
-  console.log("         driver.george@kinride.com (GEORGE5)");
+  console.log("Riders:  alice@kayu.com, bob@kayu.com");
+  console.log("Drivers: driver.carlos@kayu.com (CARLOS1), driver.diana@kayu.com (DIANA22)");
+  console.log("         driver.eric@kayu.com (ERICT3), driver.fiona@kayu.com (FIONA4)");
+  console.log("         driver.george@kayu.com (GEORGE5)");
 }
 
 main()

@@ -7,6 +7,7 @@ import { RideStatus } from "@prisma/client";
 import { computeCommission, computeLoyaltyCredits, getCurrentWeek } from "@/lib/pricing";
 import { chargeRide } from "@/lib/charge-ride";
 import { notifyRideEvent } from "@/lib/push";
+import { fetchRoute } from "@/lib/routing";
 import { sendRideReceipt } from "@/lib/email";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -34,7 +35,7 @@ export async function POST(
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const ride = await prisma.rideRequest.findUnique({ where: { id }, select: { id: true, driverId: true, riderId: true, status: true, estimatedFare: true, isKinRide: true, pickupAddress: true, dropoffAddress: true } });
+    const ride = await prisma.rideRequest.findUnique({ where: { id }, select: { id: true, driverId: true, riderId: true, status: true, estimatedFare: true, isKinRide: true, pickupAddress: true, dropoffAddress: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true } });
     if (!ride) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -132,6 +133,24 @@ export async function POST(
         driver: { select: { id: true, name: true, driverProfile: true } },
       },
     });
+
+    // Fetch and store the real road-network polyline when ride starts so that
+    // route-deviation monitoring uses accurate road geometry (not a straight line)
+    if (newStatus === "IN_PROGRESS" && ride.pickupLat && ride.pickupLng && ride.dropoffLat && ride.dropoffLng) {
+      fetchRoute([
+        { lat: ride.pickupLat, lng: ride.pickupLng },
+        { lat: ride.dropoffLat, lng: ride.dropoffLng },
+      ])
+        .then((result) => {
+          if (result && result.coordinates.length >= 2) {
+            return prisma.rideRequest.update({
+              where: { id },
+              data: { routePolyline: result.coordinates },
+            });
+          }
+        })
+        .catch(() => {});
+    }
 
     // Charge rider when ride is completed
     let paymentError: string | undefined;

@@ -83,6 +83,10 @@ export default function RiderRidePage() {
   const [ride, setRide] = useState<Ride | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSOS, setShowSOS] = useState(false);
+  const [safetyAlert, setSafetyAlert] = useState<{
+    type: "deviation" | "stopped";
+    message: string;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null);
@@ -140,7 +144,12 @@ export default function RiderRidePage() {
       }
     });
     const unsub2 = onEvent("ride:accepted", () => loadRide());
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = onEvent("safety:check", (data: unknown) => {
+      const d = data as { type: "deviation" | "stopped"; message: string };
+      setSafetyAlert({ type: d.type, message: d.message });
+      haptic("heavy");
+    });
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [onEvent, loadRide]);
 
   useEffect(() => {
@@ -536,7 +545,60 @@ export default function RiderRidePage() {
         </div>
       )}
 
-      {/* SOS Modal */}
+      {/* Safety Alert Modal */}
+      {safetyAlert && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-animate flex items-center justify-center z-50"
+          onClick={() => setSafetyAlert(null)}
+        >
+          <div
+            className="bg-card rounded-2xl p-6 max-w-sm mx-4 w-full animate-fade-in-scale"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-center mb-1">
+              {safetyAlert.type === "deviation" ? "Route Deviation Detected" : "Vehicle Stopped"}
+            </h3>
+            <p className="text-sm text-foreground/60 text-center mb-2">
+              {safetyAlert.message}
+            </p>
+            <p className="text-sm text-foreground/50 text-center mb-5">
+              Is everything okay? You can contact your driver or get emergency help below.
+            </p>
+            <div className="space-y-2">
+              {ride?.driver?.phone && (
+                <a
+                  href={`tel:${ride.driver.phone}`}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  Call Driver
+                </a>
+              )}
+              <button
+                onClick={() => setSafetyAlert(null)}
+                className="w-full py-2.5 rounded-xl bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors active:scale-[0.97]"
+              >
+                I&apos;m Okay — Dismiss
+              </button>
+              <button
+                onClick={() => { setSafetyAlert(null); setShowSOS(true); }}
+                className="w-full py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              >
+                Get Emergency Help
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* SOS Modal */}
       {showSOS && (
         <div className="fixed inset-0 bg-black/40 backdrop-animate flex items-center justify-center z-50" onClick={() => setShowSOS(false)}>
           <div className="bg-card rounded-2xl p-6 max-w-sm mx-4 text-center animate-fade-in-scale" onClick={(e) => e.stopPropagation()}>

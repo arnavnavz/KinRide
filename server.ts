@@ -5,6 +5,7 @@ import next from "next";
 import { Server as SocketServer } from "socket.io";
 import { decode } from "next-auth/jwt";
 import { startBackgroundJobs } from "./src/lib/jobs";
+import { setSocketIO } from "./src/lib/socket-server";
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
@@ -35,6 +36,9 @@ app.prepare().then(() => {
     cors: { origin: "*" },
     path: "/api/socketio",
   });
+
+  // Register io singleton so API routes (same process) can emit events
+  setSocketIO(io);
 
   // Authenticate socket connections using NextAuth JWT
   io.use(async (socket, next) => {

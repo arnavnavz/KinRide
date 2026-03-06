@@ -18,7 +18,6 @@ const providers: NextAuthOptions["providers"] = [
       const user = await prisma.user.findUnique({
         where: { email: credentials.email.toLowerCase() },
       });
-      if (!user) return null;
 
       if (!user.passwordHash) {
         throw new Error("This account uses social login. Please sign in with Google or Apple.");

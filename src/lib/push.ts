@@ -125,6 +125,15 @@ export async function notifyRideEvent(
         : "Your scheduled ride is coming up soon",
       url: `/rider/ride/${rideId}`,
     },
+    safety_check: {
+      title: "Safety Check",
+      body: extra?.safetyMessage || "Please check on your ride status.",
+      url: `/rider/ride/${rideId}`,
+      actions: [
+        { action: "ok", title: "I'm Okay" },
+        { action: "sos", title: "Get Help" },
+      ],
+    },
   };
 
   const payload = messages[event];
