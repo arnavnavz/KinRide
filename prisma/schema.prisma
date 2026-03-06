@@ -207,6 +207,7 @@ model RideRequest {
   isKinRide        Boolean    @default(false)
   riderNote        String?
   rideType         String     @default("regular")
+  verifyCode       String?
   shareToken       String     @unique @default(cuid())
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt

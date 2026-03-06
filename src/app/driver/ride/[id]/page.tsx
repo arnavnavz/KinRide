@@ -64,6 +64,15 @@ export default function DriverRidePage() {
   const [driverLocation, setDriverLocation] = useState<LatLng | null>(null);
   const lastEmitRef = useRef(0);
   const lastPersistRef = useRef(0);
+  const [showCodeEntry, setShowCodeEntry] = useState(false);
+  const [codeDigits, setCodeDigits] = useState(["", "", "", ""]);
+  const [codeError, setCodeError] = useState("");
+  const digitRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
   const { joinRide, emitRideStatus, emitDriverLocation, onEvent } = useSocket();
 
   const loadRide = useCallback(async () => {
@@ -122,13 +131,13 @@ export default function DriverRidePage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [ride?.status, sharingLocation, rideId, emitDriverLocation]);
 
-  const updateStatus = async (newStatus: string) => {
+  const updateStatus = async (newStatus: string, verifyCode?: string) => {
     setUpdating(true);
     try {
       const res = await fetch(`/api/rides/${rideId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...(verifyCode ? { verifyCode } : {}) }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -313,7 +322,15 @@ export default function DriverRidePage() {
         <div className="flex gap-2">
           {nextAction && (
             <button
-              onClick={() => updateStatus(nextAction.next)}
+              onClick={() => {
+                if (ride.status === "ARRIVING" && nextAction.next === "IN_PROGRESS") {
+                  setCodeDigits(["", "", "", ""]);
+                  setCodeError("");
+                  setShowCodeEntry(true);
+                } else {
+                  updateStatus(nextAction.next);
+                }
+              }}
               disabled={updating}
               className="flex-1 bg-primary text-white py-3 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-sm"
             >
@@ -355,6 +372,113 @@ export default function DriverRidePage() {
       {ride.status === "CANCELED" && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center text-sm text-red-700">
           This ride has been canceled.
+        </div>
+      )}
+
+      {/* Rider code verification modal */}
+      {showCodeEntry && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-animate flex items-center justify-center z-50"
+          onClick={() => setShowCodeEntry(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-xs mx-4 w-full animate-fade-in-scale"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-center mb-1 text-gray-900 dark:text-gray-100">
+              Enter Rider Code
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-5">
+              Ask the rider for their 4-digit code to start the ride
+            </p>
+
+            <div className="flex justify-center gap-3 mb-2">
+              {codeDigits.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={digitRefs[i]}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/, "");
+                    const next = [...codeDigits];
+                    next[i] = val;
+                    setCodeDigits(next);
+                    setCodeError("");
+                    if (val && i < 3) digitRefs[i + 1].current?.focus();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace" && !codeDigits[i] && i > 0) {
+                      digitRefs[i - 1].current?.focus();
+                    }
+                  }}
+                  className={`w-14 h-16 rounded-xl border-2 text-center text-2xl font-bold transition-colors focus:outline-none ${
+                    codeError
+                      ? "border-red-400 bg-red-50 dark:bg-red-900/20 text-red-600"
+                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {codeError && (
+              <p className="text-sm text-red-500 text-center mb-3 animate-fade-in">{codeError}</p>
+            )}
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowCodeEntry(false)}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={codeDigits.some((d) => !d) || updating}
+                onClick={async () => {
+                  const code = codeDigits.join("");
+                  setUpdating(true);
+                  try {
+                    const res = await fetch(`/api/rides/${rideId}/status`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ status: "IN_PROGRESS", verifyCode: code }),
+                    });
+                    if (res.ok) {
+                      const updated = await res.json();
+                      setRide(updated);
+                      emitRideStatus(rideId, "IN_PROGRESS", updated);
+                      setShowCodeEntry(false);
+                    } else {
+                      const data = await res.json();
+                      if (data.error === "Incorrect verification code") {
+                        setCodeError("Wrong code — ask the rider again");
+                        setCodeDigits(["", "", "", ""]);
+                        digitRefs[0].current?.focus();
+                      } else {
+                        toast(data.error || "Failed to start ride", "error");
+                        setShowCodeEntry(false);
+                      }
+                    }
+                  } catch {
+                    toast("Failed to start ride", "error");
+                    setShowCodeEntry(false);
+                  } finally {
+                    setUpdating(false);
+                  }
+                }}
+                className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors active:scale-[0.97]"
+              >
+                {updating ? "Starting..." : "Start Ride"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

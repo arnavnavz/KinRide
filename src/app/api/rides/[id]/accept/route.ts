@@ -69,7 +69,12 @@ export async function POST(
       }),
       prisma.rideRequest.update({
         where: { id },
-        data: { status: "ACCEPTED", driverId: session.user.id },
+        data: {
+          status: "ACCEPTED",
+          driverId: session.user.id,
+          // Generate a fresh 4-digit code for the rider to share with the driver
+          verifyCode: String(Math.floor(1000 + Math.random() * 9000)),
+        },
       }),
     ]);
 

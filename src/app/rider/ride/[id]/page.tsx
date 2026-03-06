@@ -49,6 +49,7 @@ interface Ride {
     } | null;
   } | null;
   payment?: { status: string } | null;
+  verifyCode?: string | null;
 }
 
 function simulateDriverLocation(pickup: LatLng, status: string): LatLng | null {
@@ -529,6 +530,28 @@ export default function RiderRidePage() {
           <span className="text-lg font-bold">
             {etaMinutes} min
           </span>
+        </div>
+      )}
+
+      {/* Verification code — shown when driver is on the way so rider is ready */}
+      {ride.verifyCode && ["ACCEPTED", "ARRIVING"].includes(ride.status) && (
+        <div className="bg-card rounded-2xl border border-primary/20 shadow-sm px-5 py-4 animate-fade-in">
+          <p className="text-xs font-medium text-foreground/50 mb-2 text-center tracking-widest uppercase">
+            Share this code with your driver
+          </p>
+          <div className="flex justify-center gap-3">
+            {ride.verifyCode.split("").map((digit, i) => (
+              <div
+                key={i}
+                className="w-14 h-16 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-3xl font-bold text-primary"
+              >
+                {digit}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-foreground/40 text-center mt-3">
+            Your driver will ask for this code before starting the ride
+          </p>
         </div>
       )}
 

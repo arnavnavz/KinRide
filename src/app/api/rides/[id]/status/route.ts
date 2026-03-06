@@ -35,7 +35,7 @@ export async function POST(
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const ride = await prisma.rideRequest.findUnique({ where: { id }, select: { id: true, driverId: true, riderId: true, status: true, estimatedFare: true, isKinRide: true, pickupAddress: true, dropoffAddress: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true } });
+    const ride = await prisma.rideRequest.findUnique({ where: { id }, select: { id: true, driverId: true, riderId: true, status: true, estimatedFare: true, isKinRide: true, pickupAddress: true, dropoffAddress: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, verifyCode: true } });
     if (!ride) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -57,6 +57,14 @@ export async function POST(
         { error: `Cannot transition from ${ride.status} to ${parsed.data.status}` },
         { status: 400 }
       );
+    }
+
+    // Require the rider's 4-digit verification code before starting the ride
+    if (ride.status === "ARRIVING" && parsed.data.status === "IN_PROGRESS") {
+      const submittedCode = (body as { verifyCode?: string }).verifyCode;
+      if (!submittedCode || submittedCode !== ride.verifyCode) {
+        return NextResponse.json({ error: "Incorrect verification code" }, { status: 403 });
+      }
     }
 
     const newStatus = parsed.data.status as RideStatus;
