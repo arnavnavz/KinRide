@@ -37,6 +37,7 @@ const RIDE_TYPES: RideType[] = [
   { id: "xl", label: "ride_type.xl", desc: "ride_type.xl_desc", icon: "🚙", multiplier: 1.5, eta: "5-8 min" },
   { id: "premium", label: "ride_type.premium", desc: "ride_type.premium_desc", icon: "✨", multiplier: 2.0, eta: "5-10 min" },
   { id: "pool", label: "ride_type.pool", desc: "ride_type.pool_desc", icon: "👥", multiplier: 0.7, eta: "5-12 min" },
+  { id: "accessible", label: "booking.accessible", desc: "ride_type.accessible_desc", icon: "♿", multiplier: 1.0, eta: "8-15 min" },
 ];
 
 interface SavedPlace {
@@ -161,8 +162,12 @@ export default function RequestRidePage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/rides/surge").then((r) => r.json()).then(setSurge).catch(() => {});
-  }, []);
+    if (!pickupCoords) return;
+    fetch(`/api/rides/surge?lat=${pickupCoords.lat}&lng=${pickupCoords.lng}`)
+      .then((r) => r.json())
+      .then(setSurge)
+      .catch(() => {});
+  }, [pickupCoords]);
 
   useEffect(() => {
     try {
@@ -558,7 +563,7 @@ export default function RequestRidePage() {
             onClick={() => {
               setPickupCoords(userLocation);
             }}
-            className="absolute bottom-4 right-4 z-10 bg-card shadow-lg rounded-full w-10 h-10 flex items-center justify-center border border-card-border"
+            className="absolute bottom-4 right-4 z-10 bg-card shadow-lg rounded-full w-11 h-11 flex items-center justify-center border border-card-border"
             aria-label="Center on my location"
           >
             <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,7 +607,7 @@ export default function RequestRidePage() {
           <div className="w-10 h-1 bg-foreground/15 rounded-full" />
         </button>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
+        <div className="flex-1 overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
           {/* STEP: Search */}
           {step === "search" && (
             <div className="space-y-4 animate-fade-in">
@@ -690,7 +695,7 @@ export default function RequestRidePage() {
                       }
                     }}
                     disabled={!dropoff || !dropoffCoords}
-                    className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-sm font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full border border-dashed border-foreground/20 text-foreground/40 text-sm font-medium transition-all hover:border-primary/40 hover:text-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Add saved place"
                     title="Add a custom saved place"
                   >
@@ -794,7 +799,7 @@ export default function RequestRidePage() {
                       />
                       <button
                         onClick={() => setStops(stops.filter((_, j) => j !== i))}
-                        className="absolute top-0 right-0 w-6 h-6 flex items-center justify-center rounded-full bg-foreground/10 hover:bg-red-100 dark:hover:bg-red-900/30 text-foreground/40 hover:text-red-500 transition-colors text-xs font-bold"
+                        className="absolute top-0 right-0 min-w-[44px] min-h-[44px] w-8 h-8 flex items-center justify-center rounded-full bg-foreground/10 hover:bg-red-100 dark:hover:bg-red-900/30 text-foreground/40 hover:text-red-500 transition-colors text-xs font-bold"
                         aria-label={`Remove stop ${i + 1}`}
                       >
                         ✕
@@ -908,7 +913,7 @@ export default function RequestRidePage() {
           {step === "select-type" && (
             <div className="space-y-4 animate-fade-in">
               <div className="flex items-center gap-3">
-                <button onClick={() => { setStep("search"); setSheetExpanded(false); }} className="p-1 text-foreground/50 hover:text-foreground transition-colors">
+                <button onClick={() => { setStep("search"); setSheetExpanded(false); }} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground/50 hover:text-foreground transition-colors -ml-1">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <h2 className="text-lg font-bold text-foreground">{t("booking.choose_ride")}</h2>
@@ -1005,7 +1010,7 @@ export default function RequestRidePage() {
               )}
 
               <div className="flex items-center gap-3">
-                <button onClick={() => setStep("select-type")} className="p-1 text-foreground/50 hover:text-foreground transition-colors">
+                <button onClick={() => setStep("select-type")} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground/50 hover:text-foreground transition-colors -ml-1">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <h2 className="text-lg font-bold text-foreground">Confirm ride</h2>

@@ -77,6 +77,7 @@ export default function AnalyticsPage() {
   const { t } = useI18n();
   const [data, setData] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/signin");
@@ -88,6 +89,16 @@ export default function AnalyticsPage() {
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.id) return;
+    fetch(`/api/ratings?driverId=${session.user.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.averageStars != null) setAvgRating(d.averageStars);
+      })
+      .catch(() => {});
+  }, [status, session?.user?.id]);
 
   const dailyEarnings = useMemo(
     () => data ? generateDailyEarnings(data.summary.week.net) : [],
@@ -125,9 +136,9 @@ export default function AnalyticsPage() {
     return <div className="text-center py-20 text-foreground/50">Failed to load analytics.</div>;
   }
 
-  const avgRating = 4.7 + Math.random() * 0.25;
-  const acceptanceRate = 90 + Math.random() * 5;
-  const totalTips = data.summary.allTime.net * 0.08;
+  const totalTips = data.summary.allTime.gross - data.summary.allTime.net - data.summary.allTime.fees > 0
+    ? data.summary.allTime.gross - data.summary.allTime.net - data.summary.allTime.fees
+    : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -182,11 +193,17 @@ export default function AnalyticsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
-          <p className="text-2xl font-bold text-foreground">{acceptanceRate.toFixed(0)}%</p>
+          <p className="text-2xl font-bold text-foreground">
+            {data.summary.kinRideCount > 0
+              ? `${Math.round((data.summary.kinRideCount / data.summary.totalRides) * 100)}%`
+              : "—"}
+          </p>
           <p className="text-xs text-foreground/40 mt-1">{t("driver.acceptance_rate")}</p>
         </div>
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
-          <p className="text-2xl font-bold text-amber-500">{avgRating.toFixed(1)}</p>
+          <p className="text-2xl font-bold text-amber-500">
+            {avgRating != null ? avgRating.toFixed(1) : "—"}
+          </p>
           <p className="text-xs text-foreground/40 mt-1">{t("driver.avg_rating")}</p>
         </div>
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
@@ -194,7 +211,9 @@ export default function AnalyticsPage() {
           <p className="text-xs text-foreground/40 mt-1">{t("driver.completed_rides")}</p>
         </div>
         <div className="bg-card rounded-xl border border-card-border p-4 text-center">
-          <p className="text-2xl font-bold text-green-500">${totalTips.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-green-500">
+            {totalTips > 0 ? `$${totalTips.toFixed(2)}` : "—"}
+          </p>
           <p className="text-xs text-foreground/40 mt-1">{t("driver.tips_earned")}</p>
         </div>
       </div>

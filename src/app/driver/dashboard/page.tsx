@@ -289,7 +289,7 @@ export default function DriverDashboard() {
           <button
             onClick={toggleOnline}
             disabled={toggling}
-            className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 active:scale-[0.97] ${
+            className={`px-5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium transition-all disabled:opacity-50 active:scale-[0.97] ${
               profile?.isOnline
                 ? "bg-green-500 text-white hover:bg-green-600 shadow-sm shadow-green-200"
                 : "bg-gray-200 text-foreground/70 hover:bg-gray-300"
@@ -572,14 +572,14 @@ export default function DriverDashboard() {
                       <button
                         onClick={() => setDeclineTarget(offer.rideRequestId)}
                         disabled={decliningId === offer.rideRequestId}
-                        className="px-4 py-2 text-sm text-foreground/70 bg-subtle rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 active:scale-[0.97]"
+                        className="px-4 py-2.5 min-h-[44px] text-sm text-foreground/70 bg-subtle rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 active:scale-[0.97]"
                       >
                         {decliningId === offer.rideRequestId ? "..." : t("driver.decline")}
                       </button>
                       <button
                         onClick={() => acceptOffer(offer.rideRequestId)}
                         disabled={acceptingId === offer.rideRequestId}
-                        className="px-4 py-2 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50 active:scale-[0.97]"
+                        className="px-4 py-2.5 min-h-[44px] text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50 active:scale-[0.97]"
                       >
                         {acceptingId === offer.rideRequestId ? "Accepting..." : t("driver.accept")}
                       </button>

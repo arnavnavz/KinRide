@@ -41,10 +41,21 @@ async function redisCheck(key: string, limit: number, windowSec: number): Promis
   }
 }
 
+function withSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+  return response;
+}
+
 function rateLimitResponse(msg: string, retryAfter: number) {
-  return NextResponse.json(
-    { error: msg },
-    { status: 429, headers: { "Retry-After": String(retryAfter) } }
+  return withSecurityHeaders(
+    NextResponse.json(
+      { error: msg },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    )
   );
 }
 
@@ -78,9 +89,9 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next());
 }
 
 export const config = {
-  matcher: "/api/:path*",
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons|sw.js|manifest.json|monitoring).*)"],
 };

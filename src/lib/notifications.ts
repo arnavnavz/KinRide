@@ -20,6 +20,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 export async function subscribeToPush(): Promise<PushSubscription | null> {
+  if (!("PushManager" in window) || !("serviceWorker" in navigator)) return null;
   try {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();

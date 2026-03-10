@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { pickupAddress, dropoffAddress, preferKin, specificDriverId, scheduledAt, riderNote, rideType } = parsed.data;
+    const { pickupAddress, dropoffAddress, preferKin, specificDriverId, scheduledAt, riderNote, rideType, stops, promoCode } = parsed.data;
     const { riderLat, riderLng, dropoffLat, dropoffLng } = body;
 
     const nearLocation = (typeof riderLat === "number" && typeof riderLng === "number") ? { lat: riderLat, lng: riderLng } : undefined;
@@ -52,6 +52,48 @@ export async function POST(req: NextRequest) {
       if (surgeMultiplier > 1) {
         fare = applySurge(fare, surgeMultiplier);
       }
+    }
+
+    let promoDiscount: number | null = null;
+    let appliedPromoCode: string | null = null;
+    let promoRecord: { id: string } | null = null;
+
+    if (promoCode && fare && fare > 0) {
+      const promo = await prisma.promoCode.findUnique({ where: { code: promoCode } });
+
+      if (!promo) {
+        return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
+      }
+      if (!promo.isActive) {
+        return NextResponse.json({ error: "Promo code is no longer active" }, { status: 400 });
+      }
+      if (promo.expiresAt && promo.expiresAt < new Date()) {
+        return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
+      }
+      if (promo.maxUses !== null && promo.usesCount >= promo.maxUses) {
+        return NextResponse.json({ error: "Promo code has reached its maximum uses" }, { status: 400 });
+      }
+      if (promo.minFare !== null && fare < promo.minFare) {
+        return NextResponse.json({ error: `Minimum fare of $${promo.minFare.toFixed(2)} required for this promo` }, { status: 400 });
+      }
+
+      const alreadyUsed = await prisma.promoRedemption.findUnique({
+        where: { promoCodeId_userId: { promoCodeId: promo.id, userId } },
+      });
+      if (alreadyUsed) {
+        return NextResponse.json({ error: "You have already used this promo code" }, { status: 400 });
+      }
+
+      let discount = promo.discountType === "PERCENTAGE"
+        ? fare * (promo.discountValue / 100)
+        : promo.discountValue;
+      discount = Math.min(discount, fare);
+      discount = Math.round(discount * 100) / 100;
+
+      promoDiscount = discount;
+      appliedPromoCode = promo.code;
+      promoRecord = promo;
+      fare = Math.round((fare - discount) * 100) / 100;
     }
 
     // Determine if this is a Kin ride (requesting specific driver or preferring Kin)
@@ -72,15 +114,35 @@ export async function POST(req: NextRequest) {
         specificDriverId: specificDriverId ?? null,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         estimatedFare: fare,
+        promoDiscount,
+        promoCode: appliedPromoCode,
         isKinRide,
         riderNote: riderNote ?? null,
         rideType: rideType ?? "regular",
-      pickupLat: typeof riderLat === "number" ? riderLat : null,
-      pickupLng: typeof riderLng === "number" ? riderLng : null,
-      dropoffLat: typeof dropoffLat === "number" ? dropoffLat : null,
-      dropoffLng: typeof dropoffLng === "number" ? dropoffLng : null,
+        stops: stops && stops.length > 0 ? stops : null,
+        pickupLat: typeof riderLat === "number" ? riderLat : null,
+        pickupLng: typeof riderLng === "number" ? riderLng : null,
+        dropoffLat: typeof dropoffLat === "number" ? dropoffLat : null,
+        dropoffLng: typeof dropoffLng === "number" ? dropoffLng : null,
       },
     });
+
+    if (promoRecord && promoDiscount) {
+      await prisma.$transaction([
+        prisma.promoCode.update({
+          where: { code: appliedPromoCode! },
+          data: { usesCount: { increment: 1 } },
+        }),
+        prisma.promoRedemption.create({
+          data: {
+            promoCodeId: promoRecord.id,
+            userId,
+            rideRequestId: ride.id,
+            discount: promoDiscount,
+          },
+        }),
+      ]);
+    }
 
     if (!scheduledAt) {
       createOffersForRide(ride.id).catch(console.error);

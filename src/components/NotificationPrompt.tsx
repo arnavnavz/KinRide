@@ -8,6 +8,7 @@ export function NotificationPrompt() {
   const [enabling, setEnabling] = useState(false);
 
   useEffect(() => {
+    if (!("PushManager" in window)) return;
     const dismissed = localStorage.getItem("kayu-notif-dismissed");
     const perm = getNotificationPermission();
     if (!dismissed && perm === "default") {

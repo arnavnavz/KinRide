@@ -134,6 +134,8 @@ model DriverProfile {
   verificationRevokedAt  DateTime?
   revocationReason       String?
 
+  isWheelchairAccessible Boolean  @default(false)
+
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -193,6 +195,7 @@ model RideRequest {
   driver           User?      @relation("DriverRides", fields: [driverId], references: [id])
   pickupAddress    String
   dropoffAddress   String
+  stops           Json?
   pickupLat        Float?
   pickupLng        Float?
   dropoffLat       Float?
@@ -203,6 +206,8 @@ model RideRequest {
   specificDriverId String?
   scheduledAt      DateTime?
   estimatedFare    Float?
+  promoDiscount    Float?
+  promoCode        String?
   platformFee      Float?
   isKinRide        Boolean    @default(false)
   riderNote        String?

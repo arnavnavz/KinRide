@@ -23,6 +23,7 @@ interface Ride {
   id: string;
   pickupAddress: string;
   dropoffAddress: string;
+  stops?: string[] | null;
   status: string;
   riderId: string;
   driverId: string | null;
@@ -41,10 +42,10 @@ interface Ride {
   } | null;
 }
 
-const statusFlow: Record<string, { next: string; label: string }> = {
-  ACCEPTED: { next: "ARRIVING", label: t("driver.on_my_way") },
-  ARRIVING: { next: "IN_PROGRESS", label: t("driver.start_ride") },
-  IN_PROGRESS: { next: "COMPLETED", label: t("driver.complete_ride") },
+const STATUS_FLOW_KEYS: Record<string, { next: string; labelKey: string }> = {
+  ACCEPTED: { next: "ARRIVING", labelKey: "driver.on_my_way" },
+  ARRIVING: { next: "IN_PROGRESS", labelKey: "driver.start_ride" },
+  IN_PROGRESS: { next: "COMPLETED", labelKey: "driver.complete_ride" },
 };
 
 export default function DriverRidePage() {
@@ -203,7 +204,7 @@ export default function DriverRidePage() {
   }
   if (!ride) return <div className="text-center py-20 text-gray-500">Ride not found.</div>;
 
-  const nextAction = statusFlow[ride.status];
+  const nextAction = STATUS_FLOW_KEYS[ride.status];
   const isActive = ["ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(ride.status);
   const navUrl = getNavigationUrl();
 
@@ -277,6 +278,15 @@ export default function DriverRidePage() {
               <p className="text-sm font-medium">{ride.pickupAddress}</p>
             </div>
           </div>
+          {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-2.5 h-2.5 bg-amber-400 rounded-full mt-1.5 shrink-0" />
+              <div>
+                <p className="text-xs text-gray-400">Stop {i + 1}</p>
+                <p className="text-sm font-medium">{stop}</p>
+              </div>
+            </div>
+          ))}
           <div className="flex items-start gap-3">
             <div className="w-2.5 h-2.5 bg-primary rounded-full mt-1.5 shrink-0" />
             <div>
@@ -299,7 +309,7 @@ export default function DriverRidePage() {
             {ride.rider.phone && isActive && (
               <a
                 href={`tel:${ride.rider.phone}`}
-                className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors shrink-0"
+                className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors shrink-0"
                 aria-label="Call Rider"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,7 +346,7 @@ export default function DriverRidePage() {
               disabled={updating}
               className="flex-1 bg-primary text-white py-3 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-sm"
             >
-              {updating ? "Updating..." : nextAction.label}
+              {updating ? "Updating..." : t(nextAction.labelKey)}
             </button>
           )}
           {navUrl && (
@@ -437,7 +447,7 @@ export default function DriverRidePage() {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => setShowCodeEntry(false)}
-                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 min-h-[44px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
               >
                 Cancel
               </button>
@@ -475,7 +485,7 @@ export default function DriverRidePage() {
                     setUpdating(false);
                   }
                 }}
-                className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors active:scale-[0.97]"
+                className="flex-1 min-h-[44px] bg-primary text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors active:scale-[0.97] flex items-center justify-center"
               >
                 {updating ? "Starting..." : "Start Ride"}
               </button>

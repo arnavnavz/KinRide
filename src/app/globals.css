@@ -192,6 +192,11 @@ body {
   padding-top: max(env(safe-area-inset-top, 0px), 16px);
 }
 
+/* Safe area helper for bottom elements (e.g. home indicator on iPhones) */
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+}
+
 /* Ensure Leaflet map doesn't create z-index conflicts */
 .leaflet-container {
   z-index: 0 !important;

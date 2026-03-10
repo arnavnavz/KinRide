@@ -50,6 +50,16 @@ export default function ProfilePage() {
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [editingVehicle, setEditingVehicle] = useState(false);
+  const [vehicleForm, setVehicleForm] = useState({
+    vehicleMake: "",
+    vehicleModel: "",
+    vehicleYear: "",
+    vehicleColor: "",
+    licensePlate: "",
+  });
+  const [savingVehicle, setSavingVehicle] = useState(false);
+
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -88,6 +98,15 @@ export default function ProfilePage() {
         setProfile(data);
         setEditName(data.name);
         setEditPhone(data.phone || "");
+        if (data.driverProfile) {
+          setVehicleForm({
+            vehicleMake: data.driverProfile.vehicleMake || "",
+            vehicleModel: data.driverProfile.vehicleModel || "",
+            vehicleYear: data.driverProfile.vehicleYear?.toString() || "",
+            vehicleColor: data.driverProfile.vehicleColor || "",
+            licensePlate: data.driverProfile.licensePlate || "",
+          });
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -154,6 +173,40 @@ export default function ProfilePage() {
       toast("Something went wrong", "error");
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleSaveVehicle = async () => {
+    setSavingVehicle(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vehicleForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Failed to update vehicle", "error");
+        return;
+      }
+      if (data.driverProfile) {
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                driverProfile: prev.driverProfile
+                  ? { ...prev.driverProfile, ...data.driverProfile }
+                  : prev.driverProfile,
+              }
+            : prev,
+        );
+      }
+      setEditingVehicle(false);
+      toast("Vehicle info updated!", "success");
+    } catch {
+      toast("Something went wrong", "error");
+    } finally {
+      setSavingVehicle(false);
     }
   };
 
@@ -450,36 +503,129 @@ export default function ProfilePage() {
           {/* Driver Info */}
           {isDriver && profile?.driverProfile && (
             <div className="bg-card rounded-2xl border border-card-border p-5 mb-4">
-              <h2 className="text-sm font-semibold text-foreground mb-4">Driver Info</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-card-border">
-                  <span className="text-xs text-foreground/50">Vehicle</span>
-                  <span className="text-sm text-foreground font-medium">
-                    {profile.driverProfile.vehicleColor} {profile.driverProfile.vehicleYear}{" "}
-                    {profile.driverProfile.vehicleMake} {profile.driverProfile.vehicleModel}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-card-border">
-                  <span className="text-xs text-foreground/50">License Plate</span>
-                  <span className="text-sm text-foreground font-medium">{profile.driverProfile.licensePlate}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-card-border">
-                  <span className="text-xs text-foreground/50">Kin Code</span>
-                  <span className="text-sm text-primary font-bold tracking-wider">{profile.driverProfile.kinCode}</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-xs text-foreground/50">Verification</span>
-                  <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                      profile.driverProfile.isVerified
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    }`}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-foreground">Driver Info</h2>
+                {!editingVehicle ? (
+                  <button
+                    onClick={() => setEditingVehicle(true)}
+                    className="text-xs text-primary font-medium hover:text-primary-dark transition-colors"
                   >
-                    {profile.driverProfile.isVerified ? "Verified" : "Pending"}
-                  </span>
-                </div>
+                    Edit Vehicle
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingVehicle(false);
+                      setVehicleForm({
+                        vehicleMake: profile.driverProfile?.vehicleMake || "",
+                        vehicleModel: profile.driverProfile?.vehicleModel || "",
+                        vehicleYear: profile.driverProfile?.vehicleYear?.toString() || "",
+                        vehicleColor: profile.driverProfile?.vehicleColor || "",
+                        licensePlate: profile.driverProfile?.licensePlate || "",
+                      });
+                    }}
+                    className="text-xs text-foreground/50 hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
+
+              {editingVehicle ? (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground/60 mb-1.5">Make</label>
+                      <input
+                        type="text"
+                        value={vehicleForm.vehicleMake}
+                        onChange={(e) => setVehicleForm((f) => ({ ...f, vehicleMake: e.target.value }))}
+                        className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                        placeholder="Toyota"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground/60 mb-1.5">Model</label>
+                      <input
+                        type="text"
+                        value={vehicleForm.vehicleModel}
+                        onChange={(e) => setVehicleForm((f) => ({ ...f, vehicleModel: e.target.value }))}
+                        className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                        placeholder="Camry"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground/60 mb-1.5">Year</label>
+                      <input
+                        type="number"
+                        value={vehicleForm.vehicleYear}
+                        onChange={(e) => setVehicleForm((f) => ({ ...f, vehicleYear: e.target.value }))}
+                        className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                        placeholder="2022"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground/60 mb-1.5">Color</label>
+                      <input
+                        type="text"
+                        value={vehicleForm.vehicleColor}
+                        onChange={(e) => setVehicleForm((f) => ({ ...f, vehicleColor: e.target.value }))}
+                        className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                        placeholder="Silver"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground/60 mb-1.5">License Plate</label>
+                    <input
+                      type="text"
+                      value={vehicleForm.licensePlate}
+                      onChange={(e) => setVehicleForm((f) => ({ ...f, licensePlate: e.target.value }))}
+                      className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                      placeholder="ABC 1234"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSaveVehicle}
+                    disabled={savingVehicle}
+                    className="w-full bg-primary text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    {savingVehicle ? "Saving..." : "Save Vehicle Info"}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-card-border">
+                    <span className="text-xs text-foreground/50">Vehicle</span>
+                    <span className="text-sm text-foreground font-medium">
+                      {profile.driverProfile.vehicleColor} {profile.driverProfile.vehicleYear}{" "}
+                      {profile.driverProfile.vehicleMake} {profile.driverProfile.vehicleModel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-card-border">
+                    <span className="text-xs text-foreground/50">License Plate</span>
+                    <span className="text-sm text-foreground font-medium">{profile.driverProfile.licensePlate}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-card-border">
+                    <span className="text-xs text-foreground/50">Kin Code</span>
+                    <span className="text-sm text-primary font-bold tracking-wider">{profile.driverProfile.kinCode}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs text-foreground/50">Verification</span>
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        profile.driverProfile.isVerified
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      }`}
+                    >
+                      {profile.driverProfile.isVerified ? "Verified" : "Pending"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

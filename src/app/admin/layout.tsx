@@ -141,7 +141,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </main>
 
       {/* Mobile bottom tabs */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-card border-t border-gray-100 dark:border-card-border z-40">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-card border-t border-gray-100 dark:border-card-border z-40 pb-[env(safe-area-inset-bottom)]">
         <div className="flex justify-around items-center h-16 px-1">
           {NAV_ITEMS.map((item) => (
             <Link

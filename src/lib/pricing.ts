@@ -4,6 +4,7 @@ import type { DriverPlan } from "@prisma/client";
 const BASE_FEE = 3.0;
 const PER_MILE_RATE = 2.0;
 const EARTH_RADIUS_MILES = 3958.8;
+const STATE_PER_RIDE_FEE = 0.20;
 
 function haversineDistance(
   lat1: number,
@@ -45,9 +46,13 @@ export async function estimateFare(
 
   // Road distance is ~1.3x straight-line
   const roadMiles = miles * 1.3;
-  const fare = BASE_FEE + roadMiles * PER_MILE_RATE;
+  const fare = BASE_FEE + roadMiles * PER_MILE_RATE + STATE_PER_RIDE_FEE;
 
   return Math.round(fare * 100) / 100;
+}
+
+export function computeStateFee(): { amount: number; label: string } {
+  return { amount: STATE_PER_RIDE_FEE, label: "MA Transportation Fund" };
 }
 
 const COMMISSION_RATES = {

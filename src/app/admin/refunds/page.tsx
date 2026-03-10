@@ -63,6 +63,11 @@ export default function AdminRefundsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({ rideRequestId: "", amount: "", reason: "" });
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -79,7 +84,38 @@ export default function AdminRefundsPage() {
         setError(e.message);
         setLoading(false);
       });
-  }, [page]);
+  }, [page, refreshKey]);
+
+  const handleSubmitRefund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/admin/refunds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rideRequestId: formData.rideRequestId,
+          amount: parseFloat(formData.amount),
+          reason: formData.reason,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to issue refund");
+      }
+
+      setShowModal(false);
+      setFormData({ rideRequestId: "", amount: "", reason: "" });
+      setRefreshKey((k) => k + 1);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (error) {
     return (
@@ -97,10 +133,86 @@ export default function AdminRefundsPage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Refunds</h1>
-        <p className="text-gray-500 text-sm mt-1">Manage and review issued refunds</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Refunds</h1>
+          <p className="text-gray-500 text-sm mt-1">Manage and review issued refunds</p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-dark transition-colors active:scale-[0.97]"
+        >
+          Issue Refund
+        </button>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-card-border shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
+            <h2 className="text-lg font-bold text-foreground mb-4">Issue Refund</h2>
+
+            {formError && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-2.5 rounded-lg mb-4">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitRefund} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground/80 mb-1.5">Ride ID</label>
+                <input
+                  type="text"
+                  value={formData.rideRequestId}
+                  onChange={(e) => setFormData((f) => ({ ...f, rideRequestId: e.target.value }))}
+                  className="w-full border border-gray-300 dark:border-card-border rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  placeholder="cuid of the ride request"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground/80 mb-1.5">Amount ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData((f) => ({ ...f, amount: e.target.value }))}
+                  className="w-full border border-gray-300 dark:border-card-border rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground/80 mb-1.5">Reason</label>
+                <input
+                  type="text"
+                  value={formData.reason}
+                  onChange={(e) => setFormData((f) => ({ ...f, reason: e.target.value }))}
+                  className="w-full border border-gray-300 dark:border-card-border rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  placeholder="Reason for refund"
+                  required
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 active:scale-[0.97]"
+                >
+                  {submitting ? "Submitting..." : "Submit Refund"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); setFormError(""); }}
+                  className="flex-1 border border-gray-200 dark:border-card-border text-foreground py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

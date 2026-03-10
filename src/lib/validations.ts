@@ -8,7 +8,8 @@ export const rideRequestSchema = z.object({
   specificDriverId: z.string().optional(),
   scheduledAt: z.string().datetime().optional(),
   riderNote: z.string().max(200).optional(),
-  rideType: z.enum(["regular", "xl", "premium", "pool"]).optional(),
+  rideType: z.enum(["regular", "xl", "premium", "pool", "accessible"]).optional(),
+  promoCode: z.string().optional(),
 });
 
 export const messageSchema = z.object({

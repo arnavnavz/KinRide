@@ -2,7 +2,18 @@
 
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { RideStatusBadge } from "@/components/RideStatusBadge";
+
+const SharedTripMap = dynamic(
+  () => import("@/components/RideMap").then((m) => m.RideMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[250px] rounded-2xl bg-gray-100 animate-pulse" />
+    ),
+  }
+);
 
 interface SharedTrip {
   id: string;
@@ -20,6 +31,7 @@ interface SharedTrip {
       licensePlate: string;
     } | null;
   } | null;
+  driverLocation?: { lat: number; lng: number } | null;
 }
 
 export default function SharedTripPage() {
@@ -56,6 +68,30 @@ export default function SharedTripPage() {
           </div>
           <p className="text-sm text-gray-500">Shared Trip Details</p>
         </div>
+
+        {trip.driverLocation && (
+          <div className="mb-4 h-[250px] rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+            <SharedTripMap
+              driverLocation={trip.driverLocation}
+              className="h-full w-full"
+              rounded={false}
+            />
+          </div>
+        )}
+
+        {["ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(trip.status) && (
+          <div className="mb-4 flex items-center justify-center gap-2 py-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+            </span>
+            <span className="text-sm font-medium text-gray-700">
+              {trip.status === "IN_PROGRESS"
+                ? "Ride in progress"
+                : "Driver is on the way"}
+            </span>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
           <div className="flex items-center justify-between">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface Notification {
   id: string;
@@ -173,7 +174,7 @@ export function NotificationBell() {
           </div>
 
           {/* Notification list */}
-          <div className="overflow-y-auto max-h-[23rem]">
+          <div className="overflow-y-auto max-h-[20rem]">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-foreground/40">
                 <svg className="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,6 +216,15 @@ export function NotificationBell() {
               })
             )}
           </div>
+
+          {/* View all link */}
+          <Link
+            href="/notifications"
+            onClick={() => setOpen(false)}
+            className="block text-center text-sm font-medium text-primary hover:text-primary/80 py-3 border-t border-card-border transition-colors hover:bg-subtle"
+          >
+            View all notifications
+          </Link>
         </div>
       )}
     </div>

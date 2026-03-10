@@ -21,7 +21,8 @@
     "db:migrate:create": "npx prisma migrate dev --create-only",
     "postinstall": "npx prisma generate",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "generate-vapid": "tsx scripts/generate-vapid-keys.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

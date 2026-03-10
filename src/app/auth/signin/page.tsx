@@ -183,7 +183,13 @@ function SignInForm() {
           </form>
         </div>
 
-        <div className="mt-4 text-center animate-fade-in">
+        <div className="mt-4 text-center animate-fade-in space-y-2">
+          <p className="text-sm text-foreground/50">
+            Don&apos;t have an account?{" "}
+            <Link href="/auth/signup" className="text-primary font-medium hover:underline">
+              Sign up
+            </Link>
+          </p>
           <p className="text-sm text-foreground/50">
             Want to drive?{" "}
             <Link href="/auth/driver-signup" className="text-primary font-medium hover:underline">

@@ -90,17 +90,45 @@ export async function PATCH(req: NextRequest) {
       updateData.passwordHash = await bcrypt.hash(newPassword, 10);
     }
 
-    if (Object.keys(updateData).length === 0) {
+    const vehicleFields = ["vehicleMake", "vehicleModel", "vehicleYear", "vehicleColor", "licensePlate"] as const;
+    const hasVehicleUpdate = vehicleFields.some((f) => body[f]);
+
+    if (Object.keys(updateData).length === 0 && !hasVehicleUpdate) {
       return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
-    const updated = await prisma.user.update({
-      where: { id: session.user.id },
-      data: updateData,
-      select: { id: true, name: true, email: true, phone: true, role: true },
-    });
+    let updated;
+    if (Object.keys(updateData).length > 0) {
+      updated = await prisma.user.update({
+        where: { id: session.user.id },
+        data: updateData,
+        select: { id: true, name: true, email: true, phone: true, role: true },
+      });
+    } else {
+      updated = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true, name: true, email: true, phone: true, role: true },
+      });
+    }
 
-    return NextResponse.json(updated);
+    let vehicleResult = null;
+    if (hasVehicleUpdate && session.user.role === "DRIVER") {
+      const vehicleData: Record<string, unknown> = {};
+      if (body.vehicleMake) vehicleData.vehicleMake = body.vehicleMake.trim();
+      if (body.vehicleModel) vehicleData.vehicleModel = body.vehicleModel.trim();
+      if (body.vehicleYear) vehicleData.vehicleYear = parseInt(body.vehicleYear);
+      if (body.vehicleColor) vehicleData.vehicleColor = body.vehicleColor.trim();
+      if (body.licensePlate) vehicleData.licensePlate = body.licensePlate.trim().toUpperCase();
+
+      if (Object.keys(vehicleData).length > 0) {
+        vehicleResult = await prisma.driverProfile.update({
+          where: { userId: session.user.id },
+          data: vehicleData,
+        });
+      }
+    }
+
+    return NextResponse.json({ ...updated, driverProfile: vehicleResult });
   } catch (err) {
     console.error("PATCH /api/profile error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

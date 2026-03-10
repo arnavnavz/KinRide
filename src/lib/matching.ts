@@ -24,7 +24,8 @@ interface DriverWithDistance {
 async function findNearbyDrivers(
   pickupLat: number,
   pickupLng: number,
-  excludeIds: string[] = []
+  excludeIds: string[] = [],
+  requireAccessible?: boolean
 ): Promise<DriverWithDistance[]> {
   const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
 
@@ -37,9 +38,13 @@ async function findNearbyDrivers(
     select: { driverId: true, lat: true, lng: true },
   });
 
-  // Get online + verified driver IDs
+  // Get online + verified driver IDs (optionally filtered for wheelchair accessibility)
   const onlineDrivers = await prisma.driverProfile.findMany({
-    where: { isOnline: true, isVerified: true },
+    where: {
+      isOnline: true,
+      isVerified: true,
+      ...(requireAccessible ? { isWheelchairAccessible: true } : {}),
+    },
     select: { userId: true },
   });
   const onlineSet = new Set(onlineDrivers.map((d) => d.userId));
@@ -63,12 +68,16 @@ async function findNearbyDrivers(
   return driversWithDistance.slice(0, MAX_DRIVERS_TO_OFFER);
 }
 
-async function fallbackDrivers(excludeIds: string[] = []): Promise<string[]> {
+async function fallbackDrivers(excludeIds: string[] = [], requireAccessible?: boolean): Promise<string[]> {
   const onlineDrivers = await prisma.user.findMany({
     where: {
       role: "DRIVER",
       id: { notIn: excludeIds },
-      driverProfile: { isOnline: true, isVerified: true },
+      driverProfile: {
+        isOnline: true,
+        isVerified: true,
+        ...(requireAccessible ? { isWheelchairAccessible: true } : {}),
+      },
     },
     take: MAX_DRIVERS_TO_OFFER,
     select: { id: true },
@@ -82,6 +91,8 @@ export async function createOffersForRide(rideRequestId: string) {
     include: { rider: { include: { favorites: true } } },
   });
   if (!ride || ride.status !== "REQUESTED") return;
+
+  const needsAccessible = ride.rideType === "accessible";
 
   // 1. Specific driver requested — offer only to them
   if (ride.specificDriverId) {
@@ -149,16 +160,14 @@ export async function createOffersForRide(rideRequestId: string) {
   // 3. Non-Kin ride or no Kin drivers available — find by proximity
   if (targetDriverIds.length === 0) {
     if (ride.pickupLat && ride.pickupLng) {
-      const nearbyDrivers = await findNearbyDrivers(ride.pickupLat, ride.pickupLng);
+      const nearbyDrivers = await findNearbyDrivers(ride.pickupLat, ride.pickupLng, [], needsAccessible);
       targetDriverIds = nearbyDrivers.map((d) => d.id);
       
       if (targetDriverIds.length === 0) {
-        // No drivers within radius — fall back to any online driver
-        targetDriverIds = await fallbackDrivers();
+        targetDriverIds = await fallbackDrivers([], needsAccessible);
       }
     } else {
-      // No coordinates available — fall back to any online driver
-      targetDriverIds = await fallbackDrivers();
+      targetDriverIds = await fallbackDrivers([], needsAccessible);
     }
   }
 

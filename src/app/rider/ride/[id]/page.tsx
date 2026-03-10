@@ -26,6 +26,7 @@ interface Ride {
   id: string;
   pickupAddress: string;
   dropoffAddress: string;
+  stops?: string[] | null;
   status: string;
   riderId: string;
   driverId: string | null;
@@ -478,7 +479,7 @@ export default function RiderRidePage() {
           <div className="relative">
             <button
               onClick={() => setShowShareMenu((v) => !v)}
-              className="text-xs bg-subtle text-foreground/70 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+              className="text-xs bg-subtle text-foreground/70 px-3 py-2.5 min-h-[44px] rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
             >
               {copied ? "Link copied!" : t("common.share")}
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -514,7 +515,7 @@ export default function RiderRidePage() {
           </div>
           <button
             onClick={() => setShowSOS(true)}
-            className="text-xs bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors font-medium"
+            className="text-xs bg-red-100 text-red-600 px-3 py-2.5 min-h-[44px] rounded-lg hover:bg-red-200 transition-colors font-medium"
           >
             {t("ride.sos")}
           </button>
@@ -657,16 +658,25 @@ export default function RiderRidePage() {
         <div className="space-y-2">
           <div className="flex items-start gap-3">
             <div className="w-2.5 h-2.5 bg-green-400 rounded-full mt-1.5 shrink-0" />
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-foreground/40">Pickup</p>
-              <p className="text-sm font-medium">{ride.pickupAddress}</p>
+              <p className="text-sm font-medium line-clamp-2">{ride.pickupAddress}</p>
             </div>
           </div>
+          {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-2.5 h-2.5 bg-amber-400 rounded-full mt-1.5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-foreground/40">Stop {i + 1}</p>
+                <p className="text-sm font-medium line-clamp-2">{stop}</p>
+              </div>
+            </div>
+          ))}
           <div className="flex items-start gap-3">
             <div className="w-2.5 h-2.5 bg-primary rounded-full mt-1.5 shrink-0" />
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-foreground/40">Dropoff</p>
-              <p className="text-sm font-medium">{ride.dropoffAddress}</p>
+              <p className="text-sm font-medium line-clamp-2">{ride.dropoffAddress}</p>
             </div>
           </div>
         </div>
@@ -688,7 +698,7 @@ export default function RiderRidePage() {
               {ride.driver.phone && ["ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(ride.status) && (
                 <a
                   href={`tel:${ride.driver.phone}`}
-                  className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors shrink-0"
+                  className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors shrink-0"
                   aria-label="Call Driver"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
