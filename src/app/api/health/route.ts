@@ -4,10 +4,10 @@ export async function GET() {
   let dbHealthy = false;
   try {
     const { prisma } = await import("@/lib/prisma");
-    await prisma.$queryRaw\`SELECT 1\`;
+    await prisma.$queryRaw`SELECT 1`;
     dbHealthy = true;
   } catch {
-    // DB not connected yet — still return 200 so Railway healthcheck passes
+    // DB not connected yet
   }
 
   return NextResponse.json({
