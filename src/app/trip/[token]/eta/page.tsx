@@ -10,7 +10,7 @@ const RideMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[250px] rounded-2xl bg-gray-100 animate-pulse" />
+      <div className="h-[250px] rounded-2xl bg-subtle animate-pulse" />
     ),
   }
 );
@@ -90,10 +90,10 @@ function CountdownTimer({ minutes }: { minutes: number }) {
 
   return (
     <div className="text-center">
-      <div className="text-5xl font-bold tabular-nums tracking-tight text-gray-900">
+      <div className="text-5xl font-bold tabular-nums tracking-tight text-foreground">
         {mins}:{secs.toString().padStart(2, "0")}
       </div>
-      <p className="text-sm text-gray-500 mt-1">estimated minutes remaining</p>
+      <p className="text-sm text-foreground/50 mt-1">estimated minutes remaining</p>
     </div>
   );
 }
@@ -110,7 +110,7 @@ function ProgressBar({ status }: { status: string }) {
           <div key={step} className="flex-1 flex flex-col items-center gap-1.5">
             <div
               className={`h-1.5 w-full rounded-full transition-colors duration-500 ${
-                isActive ? "bg-primary" : "bg-gray-200"
+                isActive ? "bg-primary" : "bg-foreground/15"
               }`}
             />
             <span
@@ -118,8 +118,8 @@ function ProgressBar({ status }: { status: string }) {
                 isCurrent
                   ? "text-primary"
                   : isActive
-                  ? "text-gray-600"
-                  : "text-gray-400"
+                  ? "text-foreground/60"
+                  : "text-foreground/40"
               }`}
             >
               {STATUS_LABELS[step]}
@@ -177,7 +177,7 @@ export default function SharedEtaPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Loading ETA...</p>
+          <p className="text-sm text-foreground/40">Loading ETA...</p>
         </div>
       </div>
     );
@@ -187,8 +187,8 @@ export default function SharedEtaPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 flex items-center justify-center">
         <div className="text-center px-6">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 bg-subtle rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
             </svg>
           </div>
@@ -210,21 +210,21 @@ export default function SharedEtaPage() {
             <span className="text-2xl font-bold text-primary">Kin</span>
             <span className="text-2xl font-light">Ride</span>
           </div>
-          <p className="text-xs text-gray-400">Live ETA</p>
+          <p className="text-xs text-foreground/40">Live ETA</p>
         </div>
 
         {/* ETA card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+        <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6 space-y-5">
           {etaMinutes && !isTerminal ? (
             <CountdownTimer minutes={etaMinutes} />
           ) : (
             <div className="text-center">
-              <p className="text-lg font-semibold text-gray-800">{statusMsg}</p>
+              <p className="text-lg font-semibold text-foreground">{statusMsg}</p>
             </div>
           )}
 
           {etaMinutes && !isTerminal && (
-            <p className="text-center text-sm text-gray-500">{statusMsg}</p>
+            <p className="text-center text-sm text-foreground/50">{statusMsg}</p>
           )}
 
           {!isTerminal && ride.status !== "REQUESTED" && ride.status !== "OFFERED" && (
@@ -248,7 +248,7 @@ export default function SharedEtaPage() {
 
         {/* Map */}
         {(pickupCoords || dropoffCoords) && (
-          <div className="h-[250px] rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+          <div className="h-[250px] rounded-2xl overflow-hidden shadow-sm border border-card-border">
             <RideMap
               pickup={pickupCoords}
               dropoff={dropoffCoords}
@@ -258,7 +258,7 @@ export default function SharedEtaPage() {
         )}
 
         {/* Route info */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+        <div className="bg-card rounded-2xl shadow-sm border border-card-border p-5 space-y-3">
           <div className="flex items-start gap-3">
             <div className="flex flex-col items-center gap-0.5 mt-1">
               <div className="w-2.5 h-2.5 bg-green-400 rounded-full shrink-0" />
@@ -267,12 +267,12 @@ export default function SharedEtaPage() {
             </div>
             <div className="flex-1 space-y-3">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Pickup</p>
-                <p className="text-sm text-gray-800">{ride.pickupAddress}</p>
+                <p className="text-[10px] uppercase tracking-wider text-foreground/40 font-medium">Pickup</p>
+                <p className="text-sm text-foreground">{ride.pickupAddress}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Dropoff</p>
-                <p className="text-sm text-gray-800">{ride.dropoffAddress}</p>
+                <p className="text-[10px] uppercase tracking-wider text-foreground/40 font-medium">Dropoff</p>
+                <p className="text-sm text-foreground">{ride.dropoffAddress}</p>
               </div>
             </div>
           </div>
@@ -280,16 +280,16 @@ export default function SharedEtaPage() {
 
         {/* Driver info */}
         {ride.driver && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-2">Driver</p>
+          <div className="bg-card rounded-2xl shadow-sm border border-card-border p-5">
+            <p className="text-[10px] uppercase tracking-wider text-foreground/40 font-medium mb-2">Driver</p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
                 {ride.driver.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">{ride.driver.name}</p>
+                <p className="text-sm font-medium text-foreground">{ride.driver.name}</p>
                 {ride.driver.driverProfile && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-foreground/40">
                     {ride.driver.driverProfile.vehicleColor}{" "}
                     {ride.driver.driverProfile.vehicleMake}{" "}
                     {ride.driver.driverProfile.vehicleModel}
@@ -301,7 +301,7 @@ export default function SharedEtaPage() {
         )}
 
         {/* Footer */}
-        <p className="text-[10px] text-gray-400 text-center">
+        <p className="text-[10px] text-foreground/40 text-center">
           Auto-refreshes every 10s &middot; Shared via Kayu
         </p>
       </div>

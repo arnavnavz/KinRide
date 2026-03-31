@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendPushToUser } from "@/lib/push";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
@@ -85,6 +86,17 @@ export async function POST(
         data: { updatedAt: new Date() },
       }),
     ]);
+
+    // Push notification to the other participant
+    const recipientId = chat.participantIds.find((pid: string) => pid !== session.user.id);
+    if (recipientId) {
+      const sender = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } });
+      sendPushToUser(recipientId, {
+        title: sender?.name || "New message",
+        body: parsed.data.content.substring(0, 100),
+        url: "/rider/chats",
+      }).catch(() => {});
+    }
 
     return NextResponse.json(message, { status: 201 });
   } catch (err) {

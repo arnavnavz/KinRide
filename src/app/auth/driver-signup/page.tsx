@@ -66,6 +66,7 @@ function InputField({
   onChange,
   placeholder,
   error,
+  autoComplete,
 }: {
   label: string;
   type?: string;
@@ -73,6 +74,7 @@ function InputField({
   onChange: (v: string) => void;
   placeholder?: string;
   error?: string;
+  autoComplete?: string;
 }) {
   return (
     <div>
@@ -293,6 +295,7 @@ export default function DriverSignupPage() {
                 onChange={(v) => set("name", v)}
                 placeholder="Jane Doe"
                 error={errors.name}
+                autoComplete="name"
               />
               <InputField
                 label="Email"
@@ -301,6 +304,7 @@ export default function DriverSignupPage() {
                 onChange={(v) => set("email", v)}
                 placeholder="jane@email.com"
                 error={errors.email}
+                autoComplete="email"
               />
               <InputField
                 label="Phone"
@@ -309,6 +313,7 @@ export default function DriverSignupPage() {
                 onChange={(v) => set("phone", v)}
                 placeholder="(555) 123-4567"
                 error={errors.phone}
+                autoComplete="tel"
               />
               <InputField
                 label="Password"
@@ -317,6 +322,7 @@ export default function DriverSignupPage() {
                 onChange={(v) => set("password", v)}
                 placeholder="At least 6 characters"
                 error={errors.password}
+                autoComplete="new-password"
               />
               <InputField
                 label="Confirm Password"
@@ -325,6 +331,7 @@ export default function DriverSignupPage() {
                 onChange={(v) => set("confirmPassword", v)}
                 placeholder="Re-enter password"
                 error={errors.confirmPassword}
+                autoComplete="new-password"
               />
             </div>
           )}
@@ -447,7 +454,7 @@ export default function DriverSignupPage() {
                   type="checkbox"
                   checked={form.acceptTerms}
                   onChange={(e) => set("acceptTerms", e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary"
+                  className="mt-0.5 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary"
                 />
                 <span className="text-sm text-foreground/70 group-hover:text-foreground/90 transition-colors">
                   I agree to the Kayu{" "}

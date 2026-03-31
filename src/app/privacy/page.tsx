@@ -16,7 +16,7 @@ const sections = [
 export default function PrivacyPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 sm:py-16">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-foreground/50 hover:text-foreground transition-colors mb-8">
+      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-foreground/50 hover:text-foreground transition-colors mb-8 py-2 -ml-2 pl-2 pr-3 min-h-[44px]">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         Back to Home
       </Link>

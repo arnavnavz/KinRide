@@ -50,7 +50,7 @@ export function InstallPrompt() {
   const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 bg-card border border-card-border rounded-2xl shadow-lg p-4 animate-fade-in max-w-md mx-auto safe-bottom">
+    <div className="fixed left-4 right-4 z-50 bg-card border border-card-border rounded-2xl shadow-lg p-4 animate-fade-in max-w-md mx-auto" style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
           <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +63,7 @@ export function InstallPrompt() {
             {isIOS ? "Tap the share button, then \u2018Add to Home Screen\u2019" : "Get quick access and a better experience"}
           </p>
         </div>
-        <button onClick={dismiss} className="text-foreground/30 hover:text-foreground/60 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <button onClick={dismiss} className="text-foreground/30 hover:text-foreground/60 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1.5 -mt-1.5">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>

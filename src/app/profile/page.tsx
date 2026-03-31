@@ -287,7 +287,7 @@ export default function ProfilePage() {
               {!editing ? (
                 <button
                   onClick={() => setEditing(true)}
-                  className="text-xs text-primary font-medium hover:text-primary-dark transition-colors"
+                  className="text-xs text-primary font-medium hover:text-primary-dark transition-colors px-2 py-2 min-h-[44px] flex items-center"
                 >
                   Edit Profile
                 </button>
@@ -298,7 +298,7 @@ export default function ProfilePage() {
                     setEditName(profile?.name || "");
                     setEditPhone(profile?.phone || "");
                   }}
-                  className="text-xs text-foreground/50 hover:text-foreground transition-colors"
+                  className="text-xs text-foreground/50 hover:text-foreground transition-colors px-2 py-2 min-h-[44px] flex items-center"
                 >
                   Cancel
                 </button>
@@ -315,6 +315,7 @@ export default function ProfilePage() {
                     onChange={(e) => setEditName(e.target.value)}
                     className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder="Your name"
+                    autoComplete="name"
                   />
                 </div>
                 <div>
@@ -325,6 +326,7 @@ export default function ProfilePage() {
                     onChange={(e) => setEditPhone(e.target.value)}
                     className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder="(555) 123-4567"
+                    autoComplete="tel"
                   />
                 </div>
                 <button
@@ -401,6 +403,7 @@ export default function ProfilePage() {
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder="Enter current password"
+                    autoComplete="current-password"
                   />
                 </div>
                 <div>
@@ -411,6 +414,7 @@ export default function ProfilePage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder="At least 6 characters"
+                    autoComplete="new-password"
                   />
                 </div>
                 <div>
@@ -421,6 +425,7 @@ export default function ProfilePage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder="Confirm new password"
+                    autoComplete="new-password"
                   />
                 </div>
                 <button
@@ -657,7 +662,7 @@ export default function ProfilePage() {
       {/* Delete Account Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card border border-card-border rounded-2xl p-6 max-w-sm w-full animate-fade-in">
+          <div className="bg-card border border-card-border rounded-2xl p-6 max-w-sm w-full animate-fade-in max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-foreground mb-2">Delete Account</h3>
             <p className="text-sm text-foreground/60 mb-4">
               This will permanently delete your account and anonymize your data. This cannot be undone.

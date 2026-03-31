@@ -197,26 +197,28 @@ export function OnboardingTutorial() {
                 key={i}
                 onClick={() => goTo(i)}
                 aria-label={`Go to step ${i + 1}`}
-                className={`h-2 rounded-full transition-all duration-300 ${
+                className="py-4 px-1 flex items-center justify-center"
+              >
+                <span className={`h-2 rounded-full transition-all duration-300 ${
                   i === step
                     ? "w-6 bg-primary"
                     : "w-2 bg-foreground/20 hover:bg-foreground/30"
-                }`}
-              />
+                }`} />
+              </button>
             ))}
           </div>
 
           <div className="flex items-center justify-between w-full">
             <button
               onClick={finish}
-              className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
+              className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors py-2 px-3 min-h-[44px] flex items-center"
             >
               Skip
             </button>
 
             <button
               onClick={() => (isLast ? finish() : goTo(step + 1))}
-              className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark active:scale-[0.97] transition-all"
+              className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark active:scale-[0.97] transition-all min-h-[44px]"
             >
               {isLast ? "Get Started" : "Next"}
             </button>

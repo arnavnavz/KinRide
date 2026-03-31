@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { messageSchema } from "@/lib/validations";
+import { notifyRideEvent } from "@/lib/push";
 
 export async function POST(
   req: NextRequest,
@@ -51,6 +52,11 @@ export async function POST(
         sender: { select: { id: true, name: true } },
       },
     });
+
+    notifyRideEvent(parsed.data.receiverId, "chat_message", id, {
+      senderName: message.sender.name,
+      preview: parsed.data.content.substring(0, 100),
+    }).catch(() => {});
 
     return NextResponse.json(message, { status: 201 });
   } catch (err) {
