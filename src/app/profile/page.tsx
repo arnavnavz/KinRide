@@ -59,6 +59,10 @@ export default function ProfilePage() {
     licensePlate: "",
   });
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -636,8 +640,68 @@ export default function ProfilePage() {
           >
             Sign Out
           </button>
+
+          {/* Delete Account */}
+          <div className="mt-6 pt-6 border-t border-card-border">
+            <p className="text-xs text-foreground/30 mb-2">Danger Zone</p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-sm text-red-400 hover:text-red-500 transition-colors"
+            >
+              Delete Account
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card border border-card-border rounded-2xl p-6 max-w-sm w-full animate-fade-in">
+            <h3 className="text-lg font-bold text-foreground mb-2">Delete Account</h3>
+            <p className="text-sm text-foreground/60 mb-4">
+              This will permanently delete your account and anonymize your data. This cannot be undone.
+            </p>
+            <label className="block text-xs font-medium text-foreground/60 mb-1.5">
+              Type <strong>DELETE</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              className="w-full px-3 py-2.5 bg-subtle border border-card-border rounded-xl text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-red-500/30 mb-4"
+              placeholder="DELETE"
+            />
+            {deleteError && <p className="text-sm text-red-500 mb-3">{deleteError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirm(""); setDeleteError(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-card-border text-sm font-medium text-foreground hover:bg-subtle transition-colors min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError("");
+                  try {
+                    const res = await fetch("/api/profile", { method: "DELETE" });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed to delete");
+                    signOut({ callbackUrl: "/" });
+                  } catch (err: unknown) {
+                    setDeleteError(err instanceof Error ? err.message : "Something went wrong");
+                  } finally { setDeleting(false); }
+                }}
+                disabled={deleteConfirm !== "DELETE" || deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
+              >
+                {deleting ? "Deleting..." : "Delete My Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

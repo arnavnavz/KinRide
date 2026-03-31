@@ -86,6 +86,40 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { documentId, action, reviewNote } = await req.json();
+    if (!documentId || !action) {
+      return NextResponse.json({ error: "documentId and action required" }, { status: 400 });
+    }
+
+    if (!["approve", "reject"].includes(action)) {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const doc = await prisma.driverDocument.findUnique({ where: { id: documentId } });
+    if (!doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+
+    const updated = await prisma.driverDocument.update({
+      where: { id: documentId },
+      data: {
+        status: action === "approve" ? "approved" : "rejected",
+        reviewNote: reviewNote || null,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("PATCH /api/driver/documents error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

@@ -84,3 +84,37 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { rideId, action } = await req.json();
+    if (!rideId || !action) {
+      return NextResponse.json({ error: "rideId and action required" }, { status: 400 });
+    }
+
+    const ride = await prisma.rideRequest.findUnique({ where: { id: rideId } });
+    if (!ride) return NextResponse.json({ error: "Ride not found" }, { status: 404 });
+
+    if (action === "cancel") {
+      const activeStatuses = ["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"];
+      if (!activeStatuses.includes(ride.status)) {
+        return NextResponse.json({ error: "Can only cancel active rides" }, { status: 400 });
+      }
+      const updated = await prisma.rideRequest.update({
+        where: { id: rideId },
+        data: { status: "CANCELED" },
+      });
+      return NextResponse.json(updated);
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (err) {
+    console.error("PATCH /api/admin/rides error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

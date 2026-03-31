@@ -134,3 +134,46 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+
+export async function DELETE() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    const activeRide = await prisma.rideRequest.findFirst({
+      where: {
+        OR: [{ riderId: userId }, { driverId: userId }],
+        status: { in: ["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"] },
+      },
+    });
+
+    if (activeRide) {
+      return NextResponse.json(
+        { error: "Cannot delete account with active rides. Complete or cancel them first." },
+        { status: 400 }
+      );
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: "Deleted User",
+        email: \`deleted_\${userId}@kinride.local\`,
+        passwordHash: null,
+        phone: null,
+        image: null,
+        emailVerified: false,
+      },
+    });
+
+    return NextResponse.json({ success: true, message: "Account deleted" });
+  } catch (err) {
+    console.error("DELETE /api/profile error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

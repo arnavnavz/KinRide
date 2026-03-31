@@ -89,6 +89,18 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/api/admin") && req.method !== "GET") {
+    if (await redisCheck(`mw:admin:${ip}`, 30, 60)) {
+      return withSecurityHeaders(rateLimitResponse("Too many admin requests. Please try again later.", 60));
+    }
+  }
+
+  if (pathname === "/api/profile" && req.method === "PATCH") {
+    if (await redisCheck(`mw:profile:${ip}`, 10, 60)) {
+      return withSecurityHeaders(rateLimitResponse("Too many requests. Please try again later.", 60));
+    }
+  }
+
   return withSecurityHeaders(NextResponse.next());
 }
 

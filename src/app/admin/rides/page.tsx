@@ -71,6 +71,7 @@ export default function AdminRidesPage() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchRides = useCallback(async (showLoading = true) => {
@@ -101,6 +102,27 @@ export default function AdminRidesPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+  }, [fetchRides]);
+
+  const cancelRide = useCallback(async (rideId: string) => {
+    setCancellingId(rideId);
+    try {
+      const res = await fetch("/api/admin/rides", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rideId, action: "cancel" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to cancel ride");
+        return;
+      }
+      await fetchRides(false);
+    } catch {
+      alert("Failed to cancel ride");
+    } finally {
+      setCancellingId(null);
+    }
   }, [fetchRides]);
 
   useEffect(() => {
@@ -285,6 +307,22 @@ export default function AdminRidesPage() {
                               </>
                             )}
                           </div>
+                          {["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(ride.status) && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-card-border/50">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm("Cancel this ride? This cannot be undone.")) {
+                                    cancelRide(ride.id);
+                                  }
+                                }}
+                                disabled={cancellingId === ride.id}
+                                className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {cancellingId === ride.id ? "Cancelling..." : "Cancel Ride"}
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
@@ -352,6 +390,22 @@ export default function AdminRidesPage() {
                         <span className="font-medium text-foreground capitalize">{ride.rideType}</span>
                       </div>
                     </div>
+                    {["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"].includes(ride.status) && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-card-border/50">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm("Cancel this ride? This cannot be undone.")) {
+                              cancelRide(ride.id);
+                            }
+                          }}
+                          disabled={cancellingId === ride.id}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {cancellingId === ride.id ? "Cancelling..." : "Cancel Ride"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

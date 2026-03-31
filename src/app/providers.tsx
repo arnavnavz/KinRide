@@ -3,6 +3,7 @@
 import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "@/components/Toast";
 import { ThemeProvider } from "@/components/ThemeToggle";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { OnboardingTutorial } from "@/components/OnboardingTutorial";
 import { I18nProvider } from "@/lib/i18n-context";
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <ToastProvider>
             {children}
           <NotificationPrompt />
+        <InstallPrompt />
           <OnboardingTutorial />
           <CookieConsent />
           </ToastProvider>

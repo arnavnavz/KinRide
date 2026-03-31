@@ -109,6 +109,9 @@ export default function AdminDriversPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [suspendModal, setSuspendModal] = useState<string | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
+  const [docActionLoading, setDocActionLoading] = useState<string | null>(null);
+  const [rejectingDocId, setRejectingDocId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
 
   const fetchDrivers = useCallback(async () => {
     setLoading(true);
@@ -156,6 +159,29 @@ export default function AdminDriversPage() {
     } else {
       setExpandedId(driverId);
       loadDocs(driverId);
+    }
+  }
+
+  async function handleDocAction(driverId: string, documentId: string, action: "approve" | "reject", reviewNote?: string) {
+    setDocActionLoading(documentId);
+    try {
+      const res = await fetch("/api/driver/documents", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId, action, reviewNote }),
+      });
+      if (!res.ok) throw new Error();
+      const updated: DriverDocument = await res.json();
+      setDocs((prev) => ({
+        ...prev,
+        [driverId]: prev[driverId].map((d) => (d.id === documentId ? { ...d, status: updated.status, reviewNote: updated.reviewNote } : d)),
+      }));
+      setRejectingDocId(null);
+      setRejectNote("");
+    } catch {
+      // silent
+    } finally {
+      setDocActionLoading(null);
     }
   }
 
@@ -374,6 +400,54 @@ export default function AdminDriversPage() {
                             >
                               View Document
                             </a>
+
+                            {doc.status === "pending" && (
+                              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-card-border">
+                                {rejectingDocId === doc.id ? (
+                                  <div className="space-y-2">
+                                    <input
+                                      type="text"
+                                      value={rejectNote}
+                                      onChange={(e) => setRejectNote(e.target.value)}
+                                      placeholder="Reason for rejection (optional)"
+                                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-card-border bg-white dark:bg-card text-foreground text-[11px] focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                                    />
+                                    <div className="flex gap-1.5">
+                                      <button
+                                        onClick={() => handleDocAction(driver.id, doc.id, "reject", rejectNote)}
+                                        disabled={docActionLoading === doc.id}
+                                        className="text-[11px] font-medium text-white bg-red-500 hover:bg-red-600 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                                      >
+                                        {docActionLoading === doc.id ? "..." : "Confirm Reject"}
+                                      </button>
+                                      <button
+                                        onClick={() => { setRejectingDocId(null); setRejectNote(""); }}
+                                        className="text-[11px] font-medium text-gray-500 hover:text-foreground px-2 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      onClick={() => handleDocAction(driver.id, doc.id, "approve")}
+                                      disabled={docActionLoading === doc.id}
+                                      className="text-[11px] font-medium text-white bg-emerald-500 hover:bg-emerald-600 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                      {docActionLoading === doc.id ? "..." : "Approve"}
+                                    </button>
+                                    <button
+                                      onClick={() => setRejectingDocId(doc.id)}
+                                      disabled={docActionLoading === doc.id}
+                                      className="text-[11px] font-medium text-red-600 hover:text-red-700 px-2.5 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

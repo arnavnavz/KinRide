@@ -70,3 +70,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { userId, role } = await req.json();
+    if (!userId || !role) {
+      return NextResponse.json({ error: "userId and role required" }, { status: 400 });
+    }
+    if (!["RIDER", "DRIVER", "ADMIN"].includes(role)) {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
+    if (userId === session.user.id) {
+      return NextResponse.json({ error: "Cannot change own role" }, { status: 400 });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { role },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("PATCH /api/admin/users error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

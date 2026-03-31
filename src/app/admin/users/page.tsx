@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Avatar } from "@/components/Avatar";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -49,6 +50,8 @@ function formatDate(iso: string) {
 }
 
 export default function AdminUsersPage() {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +75,24 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   }, [page, roleFilter, search]);
+
+  const changeRole = useCallback(async (userId: string, role: string) => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to change role");
+        return;
+      }
+      await fetchUsers();
+    } catch {
+      alert("Failed to change role");
+    }
+  }, [fetchUsers]);
 
   useEffect(() => {
     fetchUsers();
@@ -151,6 +172,7 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-3 font-medium">Role</th>
                   <th className="px-4 py-3 font-medium text-right">Rides</th>
                   <th className="px-4 py-3 font-medium text-right">Joined</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,6 +196,18 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500 text-xs whitespace-nowrap">
                       {formatDate(user.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={user.role}
+                        onChange={(e) => changeRole(user.id, e.target.value)}
+                        disabled={user.id === currentUserId}
+                        className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-card-border bg-white dark:bg-card text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="RIDER">Rider</option>
+                        <option value="DRIVER">Driver</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
                     </td>
                   </tr>
                 ))}
@@ -201,6 +235,19 @@ export default function AdminUsersPage() {
                 <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
                   <span>{rideCount(user)} ride{rideCount(user) !== 1 ? "s" : ""}</span>
                   <span>Joined {formatDate(user.createdAt)}</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-card-border/50 flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Role:</span>
+                  <select
+                    value={user.role}
+                    onChange={(e) => changeRole(user.id, e.target.value)}
+                    disabled={user.id === currentUserId}
+                    className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-card-border bg-white dark:bg-card text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="RIDER">Rider</option>
+                    <option value="DRIVER">Driver</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
                 </div>
               </div>
             ))}
