@@ -250,3 +250,14 @@ export function stopBackgroundJobs() {
   jobTimers.length = 0;
   console.log("[jobs] All background jobs stopped");
 }
+
+export async function expireKinProSubscriptions(): Promise<number> {
+  const result = await prisma.driverSubscription.updateMany({
+    where: {
+      plan: "KIN_PRO",
+      expiresAt: { lt: new Date() },
+    },
+    data: { plan: "FREE" },
+  });
+  return result.count;
+}

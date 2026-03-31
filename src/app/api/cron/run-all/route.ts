@@ -5,9 +5,10 @@ import {
   cleanupStaleLocations,
   cleanupOldDocuments,
   cleanupOldNotifications,
+  expireKinProSubscriptions,
 } from "@/lib/jobs";
 
-export async function POST(req: NextRequest) {
+async function runCronJobs(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -15,13 +16,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const [offers, scheduled, locations, documents, notifications] =
+    const [offers, scheduled, locations, documents, notifications, subscriptions] =
       await Promise.all([
         expireStaleOffers(),
         triggerScheduledRides(),
         cleanupStaleLocations(),
         cleanupOldDocuments(),
         cleanupOldNotifications(),
+        expireKinProSubscriptions(),
       ]);
 
     return NextResponse.json({
@@ -30,10 +32,19 @@ export async function POST(req: NextRequest) {
       locations,
       documents,
       notifications,
+      subscriptions,
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
     console.error("Cron run-all error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+export async function GET(req: NextRequest) {
+  return runCronJobs(req);
+}
+
+export async function POST(req: NextRequest) {
+  return runCronJobs(req);
 }

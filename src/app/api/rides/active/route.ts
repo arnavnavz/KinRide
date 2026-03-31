@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const activeStatuses = ["SEARCHING", "ACCEPTED", "ARRIVING", "IN_PROGRESS"] as const;
+    const activeStatuses = ["REQUESTED", "OFFERED", "ACCEPTED", "ARRIVING", "IN_PROGRESS"] as const;
 
     const ride = await prisma.rideRequest.findFirst({
       where: {

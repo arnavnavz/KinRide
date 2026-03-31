@@ -83,6 +83,9 @@ export async function PATCH(req: NextRequest) {
       if (!user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
+      if (!user.passwordHash) {
+        return NextResponse.json({ error: "This account uses social login and has no password" }, { status: 400 });
+      }
       const valid = await bcrypt.compare(currentPassword, user.passwordHash);
       if (!valid) {
         return NextResponse.json({ error: "Incorrect current password" }, { status: 400 });

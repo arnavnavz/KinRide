@@ -36,6 +36,20 @@ async function main() {
     },
   });
 
+
+  // Admin
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@kayu.com" },
+    update: {},
+    create: {
+      email: "admin@kayu.com",
+      name: "Admin User",
+      passwordHash: password,
+      role: Role.ADMIN,
+      phone: "+1555009999",
+    },
+  });
+
   // Drivers
   const drivers = [
     {
@@ -129,6 +143,7 @@ async function main() {
 
   console.log("Seeded successfully!");
   console.log("\n--- Login Credentials (all use password: password123) ---");
+  console.log("Admin:   admin@kayu.com");
   console.log("Riders:  alice@kayu.com, bob@kayu.com");
   console.log("Drivers: driver.carlos@kayu.com (CARLOS1), driver.diana@kayu.com (DIANA22)");
   console.log("         driver.eric@kayu.com (ERICT3), driver.fiona@kayu.com (FIONA4)");

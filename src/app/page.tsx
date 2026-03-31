@@ -97,7 +97,7 @@ export default function LandingPage() {
           {/* Stats strip */}
           <div className="flex items-center justify-center gap-4 sm:gap-8 mt-12 animate-fade-in" data-reveal>
             {[
-              { value: "10%", label: "Kin commission" },
+              { value: "8%", label: "Kin commission" },
               { value: "0%", label: "KinPro rate" },
               { value: "10pts", label: "per ride reward" },
             ].map((stat) => (

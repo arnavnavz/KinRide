@@ -19,6 +19,8 @@ const providers: NextAuthOptions["providers"] = [
         where: { email: credentials.email.toLowerCase() },
       });
 
+      if (!user) return null;
+
       if (!user.passwordHash) {
         throw new Error("This account uses social login. Please sign in with Google or Apple.");
       }

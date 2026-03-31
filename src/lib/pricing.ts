@@ -65,15 +65,21 @@ const COMMISSION_RATES = {
 export function computeCommission(
   fare: number,
   isKinRide: boolean,
-  driverPlan: DriverPlan
+  driverPlan: DriverPlan,
+  subscriptionExpiresAt?: Date | null
 ): { rate: number; fee: number } {
   let rate: number;
 
-  if (isKinRide && driverPlan === "KIN_PRO") {
+  const effectivePlan =
+    driverPlan === "KIN_PRO" && subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date()
+      ? "FREE"
+      : driverPlan;
+
+  if (isKinRide && effectivePlan === "KIN_PRO") {
     rate = COMMISSION_RATES.kin_kinpro;
   } else if (isKinRide) {
     rate = COMMISSION_RATES.kin;
-  } else if (driverPlan === "KIN_PRO") {
+  } else if (effectivePlan === "KIN_PRO") {
     rate = COMMISSION_RATES.standard_kinpro;
   } else {
     rate = COMMISSION_RATES.standard;

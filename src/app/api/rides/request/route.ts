@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     let promoDiscount: number | null = null;
+    let loyaltyDiscount: number | null = null;
     let appliedPromoCode: string | null = null;
     let promoRecord: { id: string } | null = null;
 
@@ -95,6 +96,32 @@ export async function POST(req: NextRequest) {
       promoRecord = promo;
       fare = Math.round((fare - discount) * 100) / 100;
     }
+
+    // Apply loyalty credits if provided
+    const loyaltyCredits = body.loyaltyCredits;
+    if (loyaltyCredits && typeof loyaltyCredits === "number" && loyaltyCredits > 0) {
+      const loyalty = await prisma.riderLoyalty.findUnique({
+        where: { riderId: session.user.id },
+      });
+      if (loyalty && loyalty.credits >= loyaltyCredits) {
+        const creditsDollars = Math.floor(loyaltyCredits) / 100;
+        loyaltyDiscount = Math.min(creditsDollars, fare);
+        fare = Math.round((fare - loyaltyDiscount) * 100) / 100;
+        
+        await prisma.$transaction([
+          prisma.riderLoyalty.update({
+            where: { riderId: session.user.id },
+            data: { credits: { decrement: loyaltyCredits } },
+          }),
+          prisma.loyaltyTransaction.create({
+            data: {
+              riderId: session.user.id,
+              amount: -loyaltyCredits,
+              reason: "ride_discount",
+            },
+          }),
+        ]);
+      }
 
     // Determine if this is a Kin ride (requesting specific driver or preferring Kin)
     let isKinRide = false;

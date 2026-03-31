@@ -14,9 +14,12 @@ export async function GET() {
       where: { driverId: session.user.id },
     });
 
+    const isExpired = sub?.plan === "KIN_PRO" && sub?.expiresAt && new Date(sub.expiresAt) < new Date();
+
     return NextResponse.json({
-      plan: sub?.plan ?? "FREE",
+      plan: isExpired ? "FREE" : (sub?.plan ?? "FREE"),
       expiresAt: sub?.expiresAt ?? null,
+      expired: !!isExpired,
     });
   } catch (err) {
     console.error("GET /api/driver/subscription error:", err);
