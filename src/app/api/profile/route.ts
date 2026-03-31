@@ -166,7 +166,7 @@ export async function DELETE() {
       where: { id: userId },
       data: {
         name: "Deleted User",
-        email: \`deleted_\${userId}@kinride.local\`,
+        email: `deleted_${userId}@kinride.local`,
         passwordHash: null,
         phone: null,
         image: null,

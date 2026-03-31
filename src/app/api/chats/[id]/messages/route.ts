@@ -88,12 +88,13 @@ export async function POST(
     ]);
 
     // Push notification to the other participant
-    const recipientId = chat.participantIds.find((pid: string) => pid !== session.user.id);
+    const recipientId = conversation.user1Id === session.user.id
+      ? conversation.user2Id
+      : conversation.user1Id;
     if (recipientId) {
-      const sender = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } });
       sendPushToUser(recipientId, {
-        title: sender?.name || "New message",
-        body: parsed.data.content.substring(0, 100),
+        title: message.sender.name || "New message",
+        body: content.trim().substring(0, 100),
         url: "/rider/chats",
       }).catch(() => {});
     }

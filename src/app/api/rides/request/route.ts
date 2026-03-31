@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
 
     // Apply loyalty credits if provided
     const loyaltyCredits = body.loyaltyCredits;
-    if (loyaltyCredits && typeof loyaltyCredits === "number" && loyaltyCredits > 0) {
+    if (loyaltyCredits && typeof loyaltyCredits === "number" && loyaltyCredits > 0 && fare && fare > 0) {
       const loyalty = await prisma.riderLoyalty.findUnique({
-        where: { riderId: session.user.id },
+        where: { riderId: userId },
       });
       if (loyalty && loyalty.credits >= loyaltyCredits) {
         const creditsDollars = Math.floor(loyaltyCredits) / 100;
@@ -110,18 +110,19 @@ export async function POST(req: NextRequest) {
         
         await prisma.$transaction([
           prisma.riderLoyalty.update({
-            where: { riderId: session.user.id },
+            where: { riderId: userId },
             data: { credits: { decrement: loyaltyCredits } },
           }),
           prisma.loyaltyTransaction.create({
             data: {
-              riderId: session.user.id,
+              riderId: userId,
               amount: -loyaltyCredits,
               reason: "ride_discount",
             },
           }),
         ]);
       }
+    }
 
     // Determine if this is a Kin ride (requesting specific driver or preferring Kin)
     let isKinRide = false;
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
         isKinRide,
         riderNote: riderNote ?? null,
         rideType: rideType ?? "regular",
-        stops: stops && stops.length > 0 ? stops : null,
+        stops: stops && stops.length > 0 ? stops : undefined,
         pickupLat: typeof riderLat === "number" ? riderLat : null,
         pickupLng: typeof riderLng === "number" ? riderLng : null,
         dropoffLat: typeof dropoffLat === "number" ? dropoffLat : null,
