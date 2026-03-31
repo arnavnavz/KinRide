@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "db:migrate:deploy": "npx prisma migrate deploy",
     "db:migrate:create": "npx prisma migrate dev --create-only",
-    "postinstall": "npx prisma generate",
+    "postinstall": "prisma generate || true",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "generate-vapid": "tsx scripts/generate-vapid-keys.ts"
