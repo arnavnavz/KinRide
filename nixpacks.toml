@@ -1,3 +1,4 @@
-# Prisma 7+ requires Node 20.19+, 22.12+, or 24+. Railway's default 20.x can be too old.
+# Prisma 7+ requires Node 20.19+, 22.12+, or 24+.
+# "22" can resolve to 22.11.x (too old). Pin 24 or 20.19 so npm/prisma agree.
 [variables]
-NODE_VERSION = "22"
+NODE_VERSION = "24"
