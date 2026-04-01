@@ -1,4 +1,7 @@
-# Prisma 7+ requires Node 20.19+, 22.12+, or 24+.
-# "22" can resolve to 22.11.x (too old). Pin 24 or 20.19 so npm/prisma agree.
+# Prisma 7: Node 20.19+, 22.12+, or 24+. Pin 20.19 so Nixpacks does not pick 22.11.x.
+# Railway sets production npm config; without --include=dev, `next build` breaks (TS, Tailwind, etc.).
 [variables]
-NODE_VERSION = "24"
+NODE_VERSION = "20.19"
+
+[phases.install]
+cmds = ["npm ci --include=dev"]

@@ -133,4 +133,7 @@ app.prepare().then(() => {
     console.log(`> Kayu ready on http://localhost:${port}`);
     startBackgroundJobs();
   });
+}).catch((err) => {
+  console.error("Next app failed to prepare:", err);
+  process.exit(1);
 });
