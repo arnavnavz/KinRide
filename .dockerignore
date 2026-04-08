@@ -1,8 +1,10 @@
 node_modules
 .next
 .git
-*.md
 .env
 .env.*
-ios/
-tests/
+coverage
+playwright-report
+test-results
+tests
+.turbo
